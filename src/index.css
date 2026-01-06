@@ -1,68 +1,241 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400..900&family=Inter:wght@300..700&display=swap');
+@import "tailwindcss";
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@custom-variant dark (&:where(.dark, .dark *));
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+@theme {
+  /* ===============================
+     TVET360 BRAND COLORS
+     =============================== */
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+  --color-primary: #1F3C88;        /* TVET Blue – Trust & Education */
+  --color-primary-light: #4F6FB8;
+  --color-primary-dark: #162E66;
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
+  --color-secondary: #2EAD4F;      /* Growth Green */
+  --color-accent: #F7931E;         /* Skills Orange */
+  --color-highlight: #F9C74F;      /* Innovation Yellow */
+  --color-tech: #00A8B5;           /* ICT Teal */
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+  --color-bg: #FFFFFF;
+  --color-bg-muted: #F4F7FB;
+  --color-text: #0F172A;
+  --color-text-muted: #64748B;
+  --color-border: #E2E8F0;
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  /* ===============================
+     SHADOWS
+     =============================== */
+
+  --shadow-soft: 0 4px 12px rgba(31, 60, 136, 0.08);
+  --shadow-medium: 0 8px 24px rgba(31, 60, 136, 0.12);
+  --shadow-glow: 0 0 20px rgba(46, 173, 79, 0.25);
+
+  /* ===============================
+     FONTS
+     =============================== */
+
+  --font-heading: "Playfair Display", serif;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  /* ===============================
+     BORDER RADIUS
+     =============================== */
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+  --radius-xl: 40px;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+/* ===============================
+   BASE STYLES
+   =============================== */
+
+@layer base {
+  body {
+    @apply bg-[var(--color-bg)] text-[var(--color-text)] font-[var(--font-body)] text-base leading-relaxed;
   }
-  a:hover {
-    color: #747bff;
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-[var(--font-heading)] tracking-tight text-[var(--color-primary)];
   }
+
+  a {
+    @apply text-[var(--color-primary)] hover:underline;
+  }
+
   button {
-    background-color: #f9f9f9;
+    @apply font-medium tracking-tight;
   }
+
+  input, select, textarea {
+    @apply font-[var(--font-body)];
+  }
+
+  img {
+    @apply block max-w-full;
+  }
+}
+
+/* ===============================
+   TYPOGRAPHY UTILITIES
+   =============================== */
+
+@layer utilities {
+  .display-1 {
+    @apply text-[72px] leading-[1.05] font-bold font-[var(--font-heading)];
+  }
+
+  .display-2 {
+    @apply text-[56px] leading-[1.1] font-semibold font-[var(--font-heading)];
+  }
+
+  .heading-1 {
+    @apply text-[42px] font-semibold;
+  }
+
+  .heading-2 {
+    @apply text-[32px] font-semibold;
+  }
+
+  .heading-3 {
+    @apply text-[24px] font-medium;
+  }
+
+  .body-large {
+    @apply text-[18px] leading-[1.7];
+  }
+
+  .body-base {
+    @apply text-[16px] leading-[1.6];
+  }
+
+  .body-small {
+    @apply text-[14px] leading-[1.5] text-[var(--color-text-muted)];
+  }
+
+  .caption {
+    @apply text-[12px] uppercase tracking-[0.12em] text-[var(--color-text-muted)];
+  }
+
+  /* ===============================
+     GRADIENTS
+     =============================== */
+
+  .gradient-primary {
+    background-image: linear-gradient(to right, #1F3C88, #4F6FB8);
+  }
+
+  .gradient-success {
+    background-image: linear-gradient(to right, #2EAD4F, #6EDC8C);
+  }
+
+  .gradient-accent {
+    background-image: linear-gradient(to right, #F7931E, #F9C74F);
+  }
+
+  .gradient-soft {
+    background-image: linear-gradient(to bottom, #F4F7FB, #FFFFFF);
+  }
+
+  /* ===============================
+     LAYOUT
+     =============================== */
+
+  .container {
+    @apply mx-auto max-w-[1280px] px-6 sm:px-4;
+  }
+
+  .section {
+    @apply py-20 sm:py-12;
+  }
+
+  /* ===============================
+     UI UTILITIES
+     =============================== */
+
+  .rounded-soft {
+    border-radius: var(--radius-sm);
+  }
+
+  .rounded-md {
+    border-radius: var(--radius-md);
+  }
+
+  .rounded-lg {
+    border-radius: var(--radius-lg);
+  }
+
+  .rounded-xl {
+    border-radius: var(--radius-xl);
+  }
+
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .shadow-medium {
+    box-shadow: var(--shadow-medium);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .text-primary {
+    color: var(--color-primary);
+  }
+
+  .text-success {
+    color: var(--color-secondary);
+  }
+
+  .bg-primary {
+    background-color: var(--color-primary);
+  }
+
+  .bg-muted {
+    background-color: var(--color-bg-muted);
+  }
+
+  .scroll-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scroll-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+}
+
+/* ===============================
+   FORMS (TVET360 STANDARD)
+   =============================== */
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: var(--color-text);
+}
+
+.form-input {
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #F9FAFB;
+  transition: all 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(31, 60, 136, 0.15);
 }
