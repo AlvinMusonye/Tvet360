@@ -31,7 +31,11 @@ function App() {
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route element={<Layout />}>
-          <Route path="/moe" element={<Moe />} />
+        <Route path="/moe" element={
+          <ProtectedRoute requiredRole="MINISTRY_OF_EDUCATION_ADMIN">
+            <Moe />
+          </ProtectedRoute>
+  } />          
           <Route path="/moe/institutions" element={<MoeInstitution />} />
           <Route path="/moe/equity" element={<Equity />} />
           <Route path="/moe/employment" element={<Employment />} />
@@ -48,9 +52,17 @@ function App() {
 
 
 
-          <Route path="/sp" element={<Sp />} />
-          <Route path="/institution" element={<Institution />} />
-          <Route path="/institution/students" element={<Students />} />
+        <Route path="/sp" element={
+            <ProtectedRoute requiredRole="SP_ADMIN">
+              <Sp />
+            </ProtectedRoute>
+          } />  
+          <Route path="/institution" element={
+            <ProtectedRoute requiredRole="INSTITUTION_ADMIN">
+              <Institution />
+            </ProtectedRoute>
+          } />     
+       <Route path="/institution/students" element={<Students />} />
           <Route path="/institution/staff" element={<Staff />} />
           <Route path="/institution/programs" element={<Programs />} />
           <Route path="/institution/reports" element={<Reports />} />

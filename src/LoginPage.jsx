@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +13,7 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,36 +21,65 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      // Replace this with your actual API call
-      const response = await fetch('YOUR_LOGIN_API_ENDPOINT', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          password: formData.password,
-        }),
-      });
+     const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    username: formData.username.trim(), // Ensure no extra whitespace
+    password: formData.password
+  }),
+});
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.message || 'Login failed. Please check your credentials.');
       }
 
-      // Store JWT token
-      if (formData.rememberMe) {
-        localStorage.setItem('authToken', data.token);
-      } else {
-        sessionStorage.setItem('authToken', data.token);
+      // Debug log the response
+      console.log('Login response:', data);
+
+      // Prepare user data with proper null checks
+      const userData = {
+        token: data.token || data.accessToken, // Handle both token and accessToken
+        username: data.user?.username || data.details?.username || data.email, // Handle different response structures
+        role: data.user?.role || data.details?.userRole || data.role, // Handle different response structures
+        institution: data.user?.institutionId || data.details?.userInstitution || null,
+        email: data.user?.email || data.details?.userEmail || data.email
+      };
+
+      if (!userData.username) {
+        throw new Error('Invalid user data received from server');
       }
 
-      // Redirect to dashboard or home page
-      navigate('/dashboard');
+      // Call login with rememberMe flag
+      login(userData, formData.rememberMe);
 
+      // Redirect based on role
+      const userRole = userData.role?.toUpperCase();
+      
+      switch(userRole) {
+        case 'MINISTRY_OF_EDUCATION_ADMIN':
+        case 'MOE_ADMIN': // Handle different role naming
+          navigate('/moe');
+          break;
+        case 'INSTITUTION_ADMIN':
+          navigate('/institution');
+          break;
+        case 'SP_ADMIN':
+          navigate('/sp');
+          break;
+        default:
+          console.warn('Unknown role, redirecting to default dashboard');
+          navigate('/dashboard');
+      }
     } catch (err) {
-      setError(err.message || 'An error occurred during login');
+      console.error('Login error:', err);
+      setError(err.message || 'An error occurred during login. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -92,6 +125,7 @@ const LoginPage = () => {
                 placeholder="e.g. jdoe_tvet"
                 className="form-input w-full border border-border rounded-md px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary"
                 required
+                autoComplete="username"
               />
             </div>
           </div>
@@ -116,6 +150,7 @@ const LoginPage = () => {
                 placeholder="••••••••"
                 className="form-input w-full border border-border rounded-md px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary"
                 required
+                autoComplete="current-password"
               />
             </div>
           </div>
@@ -146,16 +181,6 @@ const LoginPage = () => {
             {isLoading ? 'Signing in...' : 'Sign In to TVET360'}
           </button>
         </form>
-
-        {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-border">
-          <p className="text-sm text-text-muted text-center">
-            New to the platform?{' '}
-            <a href="#" className="font-medium text-primary hover:underline">
-              Create an account
-            </a>
-          </p>
-        </div>
       </div>
     </div>
   );

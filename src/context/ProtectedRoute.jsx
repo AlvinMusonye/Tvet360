@@ -1,23 +1,15 @@
-// src/context/ProtectedRoute.jsx
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
-const ProtectedRoute = ({ children, requiredPermissions = [] }) => {
+const ProtectedRoute = ({ children, requiredRole }) => {
   const { currentUser } = useAuth();
 
   if (!currentUser) {
-    return <Navigate to="/" />;  // Redirect to login if not authenticated
+    return <Navigate to="/" replace />;
   }
 
-  // Check if user has required permissions
-  if (requiredPermissions.length > 0) {
-    const hasPermission = requiredPermissions.every(permission => 
-      currentUser.permissions?.includes(permission)
-    );
-    
-    if (!hasPermission) {
-      return <Navigate to="/unauthorized" />;
-    }
+  if (requiredRole && currentUser.role !== requiredRole) {
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return children;
