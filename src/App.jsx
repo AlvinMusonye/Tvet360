@@ -22,6 +22,8 @@ import InstitutionReports from './institution/InstitutionReports';
 import MoeAudit from './moe/MoeAudit';
 import InstitutionAudit from './institution/InstitutionAudit';
 import UserManagement from './moe/UserManagement';
+import Setting from './components/Setting'
+
 
 function App() {
   return (
@@ -70,9 +72,14 @@ function App() {
           <Route path="/institution/financial" element={<FinancialManagement />} />
           <Route path="/institution/reports" element={<InstitutionReports />} />
           <Route path="/institution/audit" element={<InstitutionAudit />} />
-
+        <Route path="/settings" element={
+  <ProtectedRoute>
+    <Setting />
+  </ProtectedRoute>
+} />
 
         </Route>
+
       </Routes>
     </Router>
   </AuthProvider>

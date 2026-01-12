@@ -42,7 +42,7 @@ export const navigationItems = {
   path: '/moe/audit',
   icon: <Gavel size={18} />
 },
-{ title: 'Settings', path: '/moe/settings', icon: <Settings size={18} /> },
+{ title: 'Settings', path: '/settings', icon: <Settings size={18} /> }
 
   ],
   sp: [
@@ -50,23 +50,23 @@ export const navigationItems = {
     { title: 'My Programs', path: '/sp/programs', icon: <BookOpen size={18} /> },
     { title: 'Students', path: '/sp/students', icon: <Users size={18} /> },
     { title: 'Assessments', path: '/sp/assessments', icon: <FileText size={18} /> },
-    { title: 'Settings', path: '/sp/settings', icon: <Settings size={18} /> },
+    { title: 'Settings', path: '/settings', icon: <Settings size={18} /> }
   ],
   institution: [
     { title: 'Dashboard', path: '/institution', icon: <Home size={18} /> },
     { title: 'Students', path: '/institution/students', icon: <Users size={18} /> },
     { title: 'Staff', path: '/institution/staff', icon: <UserCog size={18} /> },
     { title: 'Programs', path: '/institution/programs', icon: <BookOpen size={18} /> },
-      { 
+    { 
     title: 'Infrastructure', 
     path: '/institution/infrastructure', 
     icon: <Layout size={18} />  
-  },
-  {
+     },
+    {
   title: 'Audit',
   path: '/institution/audit',
   icon: <ClipboardCheck size={18} />
-},
+  },
   { 
     title: 'Financial Management', 
     path: '/institution/financial', 
@@ -74,5 +74,8 @@ export const navigationItems = {
   },
 
     { title: 'Reports', path: '/institution/reports', icon: <BarChart2 size={18} /> },
+    { title: 'Settings', path: '/settings', icon: <Settings size={18} /> }
+
   ],
+  
 };

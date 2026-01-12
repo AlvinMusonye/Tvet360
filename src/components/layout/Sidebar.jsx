@@ -34,7 +34,7 @@ const Sidebar = () => {
           alt="TVET360 Logo" 
           className="h-10 w-10 rounded-md object-cover"
         />
-        <h2 className="text-xl font-semibold text-[var(--color-primary)]">TVET360</h2>
+        <h2 className="text-xl font-semibold text-[var(--color-primary)]">TVETA360</h2>
       </div>
       <nav className="flex-1 overflow-y-auto p-4">
         <ul className="space-y-2">
