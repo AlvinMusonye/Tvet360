@@ -23,6 +23,7 @@ import MoeAudit from './moe/MoeAudit';
 import InstitutionAudit from './institution/InstitutionAudit';
 import UserManagement from './moe/UserManagement';
 import Setting from './components/Setting'
+import MoeStudents from './moe/MoeStudents';
 
 
 function App() {
@@ -43,6 +44,7 @@ function App() {
           <Route path="/moe/employment" element={<Employment />} />
           <Route path="/moe/reports" element={<MoeReports />} />
           <Route path="/moe/audit" element={<MoeAudit />} />
+          <Route path='/moe/students' element={<MoeStudents />} />
 <Route 
   path="/moe/users" 
   element={

@@ -31,9 +31,12 @@ const Students = () => {
       }
 
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/v1/students`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/student-enrollment/student-dtl`, {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${currentUser.token}`
+          'Authorization': `Bearer ${currentUser.token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
         }
       });
       
@@ -43,6 +46,7 @@ const Students = () => {
       }
       
       const data = await response.json();
+      console.log('Fetched students data:', data);
       setStudents(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || 'Failed to fetch students');
@@ -103,20 +107,20 @@ const Students = () => {
       setLoading(true);
       setError(null);
       
-      const queryParams = new URLSearchParams({
-        startDate: formatDateForApi(dateRange.startDate),
-        endDate: formatDateForApi(dateRange.endDate)
-      }).toString();
+      const requestBody = {
+        startDate: new Date(dateRange.startDate).toISOString(),
+        endDate: new Date(dateRange.endDate).toISOString()
+      };
 
-      const apiUrl = `${API_BASE_URL}/api/v1/student-enrollment/total-soc-econ?${queryParams}`;
-      console.log('Fetching from:', apiUrl);
+      console.log('Request body:', JSON.stringify(requestBody, null, 2));
 
-      const response = await fetch(apiUrl, {
-        method: 'GET',
+      const response = await fetch(`${API_BASE_URL}/api/v1/student-enrollment/total-soc-econ`, {
+        method: 'POST',
         headers: {
-          'Accept': 'application/json',
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${currentUser?.token}`
         },
+        body: JSON.stringify(requestBody),
         credentials: 'include'
       });
 
@@ -143,14 +147,14 @@ const Students = () => {
   const filteredStudents = Array.isArray(students) 
     ? students.filter(student => {
         const matchesSearch = 
-          (student.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-          (student.admissionNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-          (student.idNumber || '').includes(searchTerm);
+          (student.studentName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+          (student.studentAdmissionNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+          (student.studentNumber || '').includes(searchTerm);
         
         const matchesFilters = 
           (filters.program === 'all' || student.program === filters.program) &&
-          (filters.status === 'all' || student.status === filters.status) &&
-          (filters.gender === 'all' || student.gender === filters.gender);
+          (filters.status === 'all' || student.studentCurrentStatus === filters.status) &&
+          (filters.gender === 'all' || student.studentGender === filters.gender);
         
         return matchesSearch && matchesFilters;
       })
@@ -179,7 +183,15 @@ const Students = () => {
     setActiveFilter(filter);
     setShowFilterDropdown(false);
     
-    if (filter === 'socioEconomic') {
+    if (filter === 'all') {
+      // Reset all filters when showing all students
+      setFilters({
+        program: 'all',
+        status: 'all',
+        gender: 'all'
+      });
+      setSearchTerm('');
+    } else if (filter === 'socioEconomic') {
       fetchSocioEconomicData();
     } else if (filter === 'socioEconomicByProgram') {
       fetchSocioEconomicByProgram('');
@@ -235,14 +247,7 @@ const Students = () => {
             {showFilterDropdown && (
               <div className="absolute right-0 z-10 w-56 mt-2 origin-top-right bg-white border border-gray-200 rounded-md shadow-lg">
                 <div className="p-2">
-                  <button
-                    onClick={() => handleFilterSelect('all')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${
-                      activeFilter === 'all' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Show All Students
-                  </button>
+             
                   <button
                     onClick={() => handleFilterSelect('socioEconomicByProgram')}
                     className={`w-full text-left px-4 py-2 text-sm rounded ${
@@ -346,52 +351,85 @@ const Students = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admission No.</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Admission No.
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Student Number
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Gender
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Program
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => (
-                    <tr key={student.id} className="hover:bg-gray-50">
+                  filteredStudents.map((student, index) => (
+                    <tr key={`${student.studentAdmissionNumber}-${index}`} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{student.studentAdmissionNumber || 'N/A'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{student.studentNumber || 'N/A'}</div>
+                      </td>
+                      <td className="px-6 py-4">
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                            <Users className="h-5 w-5 text-gray-500" />
+                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                            <Users className="h-6 w-6 text-indigo-600" />
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{student.name || 'N/A'}</div>
-                            <div className="text-sm text-gray-500">{student.idNumber || ''}</div>
+                            <div className="text-sm font-medium text-gray-900">{student.studentName || 'N/A'}</div>
+                            <div className="text-sm text-gray-500">
+                              {student.ethnicGroup || 'N/A'}
+                            </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {student.admissionNumber || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {student.program || 'N/A'}
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          student.status === 'active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
+                          student.studentCurrentStatus === 'Active' ? 'bg-green-100 text-green-800' : 
+                          student.studentCurrentStatus === 'Inactive' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
                         }`}>
-                          {student.status || 'inactive'}
+                          {student.studentCurrentStatus || 'Unknown'}
                         </span>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {student.studentReportingStatus || 'N/A'}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-4">View</button>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{student.studentGender || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">
+                          {student.studentDateOfBirth ? new Date(student.studentDateOfBirth).toLocaleDateString() : 'N/A'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{student.program || 'N/A'}</div>
+                        <div className="text-xs text-gray-500">
+                          {student.county ? `County: ${student.county}` : ''}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button className="text-indigo-600 hover:text-indigo-900 mr-3">View</button>
                         <button className="text-indigo-600 hover:text-indigo-900">Edit</button>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">
                       No students found matching your criteria
                     </td>
                   </tr>

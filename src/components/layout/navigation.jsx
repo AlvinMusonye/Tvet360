@@ -20,29 +20,29 @@ export const navigationItems = {
   moe: [
     { title: 'Dashboard', path: '/moe', icon: <Home size={18} /> },
     { title: 'Institutions', path: '/moe/institutions', icon: <Building2 size={18} /> },
-    // { title: 'Programs', path: '/moe/programs', icon: <BookOpen size={18} /> },
+    { title: 'Students', path: '/moe/students', icon: <Users size={18} /> },
     {
-  title: 'Employment',
-  path: '/moe/employment',
-  icon: <Briefcase size={18} />
-},
+      title: 'Employment',
+      path: '/moe/employment',
+      icon: <Briefcase size={18} />
+    },
     { title: 'Reports', path: '/moe/reports', icon: <BarChart2 size={18} /> },
-        {
-  title: 'Equity & Compliance',
-  path: '/moe/equity',
-  icon: <Users2 size={18} />
-},
-{
-  title: 'User Management',
-  path: '/moe/users',
-  icon: <Users size={18} />
-},
-{
-  title: 'Audit',
-  path: '/moe/audit',
-  icon: <Gavel size={18} />
-},
-{ title: 'Settings', path: '/settings', icon: <Settings size={18} /> }
+    {
+      title: 'Equity & Compliance',
+      path: '/moe/equity',
+      icon: <Users2 size={18} />
+    },
+    {
+      title: 'User Management',
+      path: '/moe/users',
+      icon: <UserCog size={18} />
+    },
+    {
+      title: 'Audit',
+      path: '/moe/audit',
+      icon: <Gavel size={18} />
+    },
+    { title: 'Settings', path: '/settings', icon: <Settings size={18} /> }
 
   ],
   sp: [
