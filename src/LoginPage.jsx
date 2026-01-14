@@ -122,7 +122,7 @@ const LoginPage = () => {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="e.g. jdoe_tvet"
+                placeholder="username"
                 className="form-input w-full border border-border rounded-md px-4 py-3 focus:ring-2 focus:ring-primary focus:border-primary"
                 required
                 autoComplete="username"

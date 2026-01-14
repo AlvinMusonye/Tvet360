@@ -132,7 +132,7 @@ const Moe = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="mb-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800">MoE National Overview</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Tvet360 Overview</h2>
         <p className="text-gray-600">Real-time monitoring across all TVET institutions</p>
       </div>
 

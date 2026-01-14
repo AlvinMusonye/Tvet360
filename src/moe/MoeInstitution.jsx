@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Search, Filter, Plus, X } from 'lucide-react';
+import { Search, Filter, Plus, X, BarChart as BarChartIcon } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const MoeInstitution = () => {
   const { currentUser } = useAuth();
@@ -11,6 +14,12 @@ const MoeInstitution = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [allInstitutions, setAllInstitutions] = useState([]);
+  const [selectedInstitutionForModal, setSelectedInstitutionForModal] = useState(null);
+  const [programData, setProgramData] = useState([]);
+  const [loadingProgramData, setLoadingProgramData] = useState(false);
+  const [isProgramModalOpen, setIsProgramModalOpen] = useState(false);
+  const [innovationIndexData, setInnovationIndexData] = useState([]);
   const [error, setError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -135,39 +144,77 @@ const MoeInstitution = () => {
     }
   };
 
+  const handleInstitutionClick = async (institution) => {
+    setSelectedInstitutionForModal(institution);
+    setIsProgramModalOpen(true);
+    setLoadingProgramData(true);
+    setProgramData([]); // Clear previous data
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/program/get-std-ttl-prog-inst?institutionRegistrationNumber=${institution.institutionRegistrationNumber}`, {
+            headers: {
+                'Authorization': `Bearer ${currentUser?.token}`,
+            }
+        });
+        const result = await response.json();
+        if (result.status === 200 && Array.isArray(result.data)) {
+            setProgramData(result.data);
+        } else {
+            console.error('Failed to fetch program data:', result.message);
+            setProgramData([]);
+        }
+    } catch (error) {
+        console.error("Error fetching program data for institution:", error);
+        setProgramData([]);
+    } finally {
+        setLoadingProgramData(false);
+    }
+  };
+
   const fetchInstitutionsData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const [totalRes, typesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/v1/institution/total`, {
-          headers: {
-            'Authorization': `Bearer ${currentUser?.token}`,
-            'Content-Type': 'application/json'
-          }
-        }),
-        fetch(`${API_BASE_URL}/api/v1/institution/total-by-type`, {
-          headers: {
-            'Authorization': `Bearer ${currentUser?.token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+      const headers = {
+        'Authorization': `Bearer ${currentUser?.token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const [totalRes, typesRes, allInstRes, innovationRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/v1/institution/total`, { headers }),
+        fetch(`${API_BASE_URL}/api/v1/institution/total-by-type`, { headers }),
+        fetch(`${API_BASE_URL}/api/v1/institution/get`, { headers }),
+        fetch(`${API_BASE_URL}/api/v1/program/get-avg-inn-idx-inst`, { headers })
       ]);
 
-      if (!totalRes.ok || !typesRes.ok) {
+      if (!totalRes.ok || !typesRes.ok || !allInstRes.ok || !innovationRes.ok) {
         throw new Error('Failed to fetch institution data');
       }
 
       const totalData = await totalRes.json();
       const typesData = await typesRes.json();
+      const allInstitutionsData = await allInstRes.json();
+      const innovationData = await innovationRes.json();
 
       if (totalData.status === 200) {
         setTotalInstitutions(totalData.data.value);
       }
 
       if (typesData.status === 200 && Array.isArray(typesData.data)) {
-        setInstitutionTypes(typesData.data);
+        // Ensure the key is 'type' for consistency
+        const formattedTypes = typesData.data.map(item => ({
+          type: item.type || item.name, // Handle potential inconsistencies
+          count: item.count
+        }));
+        setInstitutionTypes(formattedTypes);
+      }
+
+      if (allInstitutionsData.data && Array.isArray(allInstitutionsData.data)) {
+        setAllInstitutions(allInstitutionsData.data);
+      }
+
+      if (innovationData.status === 200 && Array.isArray(innovationData.data)) {
+        setInnovationIndexData(innovationData.data);
       }
     } catch (err) {
       console.error('Error fetching institution data:', err);
@@ -178,9 +225,10 @@ const MoeInstitution = () => {
   };
 
   // Filter institutions based on search and type
-  const filteredInstitutions = institutionTypes.filter(type => {
-    const matchesSearch = type.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === 'All' || type.name === selectedType;
+  const filteredInstitutions = allInstitutions.filter(inst => {
+    const matchesSearch = inst.institutionName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          inst.institutionRegistrationNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = selectedType === 'All' || inst.institutionType === selectedType;
     return matchesSearch && matchesType;
   });
 
@@ -306,7 +354,6 @@ const MoeInstitution = () => {
                 >
                   <option value="INSTITUTE_OF_TECHNOLOGY">Institute of Technology</option>
                   <option value="NATIONAL_POLYTECHNIC">National Polytechnic</option>
-                  <option value="TECHNICAL_UNIVERSITY">Technical University</option>
                   <option value="TECHNICAL_VOCATIONAL_COLLEGE">Technical & Vocational College</option>
                 </select>
               </div>
@@ -451,8 +498,8 @@ const MoeInstitution = () => {
             >
               <option value="All">All Types</option>
               {Array.isArray(institutionTypes) && institutionTypes.map((type) => (
-                <option key={type.name} value={type.name}>
-                  {type.name} ({type.count})
+                <option key={type.type} value={type.type}>
+                  {type.type}
                 </option>
               ))}
             </select>
@@ -477,41 +524,116 @@ const MoeInstitution = () => {
         </div>
       </div>
 
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Institutions by Type */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4">Institutions by Type</h4>
+          {loading ? (
+            <div className="h-64 flex items-center justify-center text-gray-400">Loading chart...</div>
+          ) : institutionTypes.length > 0 ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={institutionTypes}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                    nameKey="type"
+                    label={({ type, percent }) => `${type}: ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {institutionTypes.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => [`${value} institutions`, 'Count']} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-400">No data available</div>
+          )}
+        </div>
+
+        {/* Average Innovation Index by Institution */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4">Average Innovation Index</h4>
+          {loading ? (
+            <div className="h-64 flex items-center justify-center text-gray-400">Loading chart...</div>
+          ) : innovationIndexData.length > 0 ? (
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={innovationIndexData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="institutionName" tick={{ fontSize: 10 }} interval={0} angle={-40} textAnchor="end" height={70} />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [value.toFixed(2), 'Avg. Index']} />
+                  <Bar dataKey="averageInnovationIndex" name="Avg. Innovation Index" fill="#82ca9d" radius={[4, 4, 0, 0]}>
+                    {innovationIndexData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-400">No innovation index data available</div>
+          )}
+        </div>
+      </div>
+
       {/* Institutions Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden mb-8">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Institution Type
+                  Institution Name
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Count
+                  Registration No.
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Percentage
+                  County
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Accreditation
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredInstitutions.length > 0 ? (
-                filteredInstitutions.map((type) => (
-                  <tr key={type.name} className="hover:bg-gray-50">
+                filteredInstitutions.map((inst) => (
+                  <tr key={inst.institutionRegistrationNumber} onClick={() => handleInstitutionClick(inst)} className="hover:bg-gray-50 cursor-pointer">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {type.name}
+                      {inst.institutionName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {type.count}
+                      {inst.institutionRegistrationNumber}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {((type.count / totalInstitutions) * 100).toFixed(1)}%
+                      {inst.institutionCounty}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{inst.institutionType}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.institutionAccreditationStatus === 'ACCREDITED' ? 'bg-green-100 text-green-800' : inst.institutionAccreditationStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                        {inst.institutionAccreditationStatus}
+                      </span>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="3" className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
                     No institutions found matching your criteria
                   </td>
                 </tr>
@@ -520,6 +642,60 @@ const MoeInstitution = () => {
           </table>
         </div>
       </div>
+
+      {isProgramModalOpen && selectedInstitutionForModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                <div className="p-6 border-b">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-xl font-semibold text-gray-800">
+                            Student Enrollment for {selectedInstitutionForModal.institutionName}
+                        </h3>
+                        <button onClick={() => setIsProgramModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+                </div>
+                <div className="p-6 overflow-y-auto">
+                    {loadingProgramData ? (
+                        <div className="text-center py-8">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                            <p className="mt-2 text-gray-600">Loading program data...</p>
+                        </div>
+                    ) : programData.length > 0 ? (
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program Code</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Students Enrolled</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {programData.map((prog, index) => (
+                                    <tr key={index}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{prog.programCode}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{prog.totalStudentsEnrolled}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">
+                            No program enrollment data found for this institution.
+                        </div>
+                    )}
+                </div>
+                <div className="p-4 bg-gray-50 border-t text-right">
+                    <button
+                        onClick={() => setIsProgramModalOpen(false)}
+                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
