@@ -31,6 +31,7 @@ const MoeInstitution = () => {
     institutionName: '',
     principalName: '',
     principalContact: '',
+    institutionPhoneNumber: '',
     institutionCounty: '',
     institutionType: 'INSTITUTE_OF_TECHNOLOGY',
     institutionAddress: '',
@@ -118,6 +119,7 @@ const MoeInstitution = () => {
     if (!formData.institutionName.trim()) errors.institutionName = 'Institution name is required';
     if (!formData.principalName.trim()) errors.principalName = 'Principal name is required';
     if (!formData.principalContact.trim()) errors.principalContact = 'Principal contact is required';
+    if (!formData.institutionPhoneNumber.trim()) errors.institutionPhoneNumber = 'Institution phone number is required';
     if (!formData.institutionCounty.trim()) errors.institutionCounty = 'County is required';
     if (!formData.institutionAddress.trim()) errors.institutionAddress = 'Address is required';
     if (isNaN(formData.institutionGovernanceScore) || formData.institutionGovernanceScore < 0 || formData.institutionGovernanceScore > 100) {
@@ -189,6 +191,7 @@ const MoeInstitution = () => {
         institutionName: '',
         principalName: '',
         principalContact: '',
+        institutionPhoneNumber: '',
         institutionCounty: '',
         institutionType: 'INSTITUTE_OF_TECHNOLOGY',
         institutionAddress: '',
@@ -417,6 +420,24 @@ const MoeInstitution = () => {
                   className={`w-full px-3 py-2 border ${formErrors.principalContact ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500`}
                 />
                 {formErrors.principalContact && <p className="mt-1 text-sm text-red-600">{formErrors.principalContact}</p>}
+              </div>
+
+              {/* Institution Phone Number */}
+              <div>
+                <label htmlFor="institutionPhoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                  Institution Phone Number *
+                </label>
+                <input
+                  type="text"
+                  id="institutionPhoneNumber"
+                  name="institutionPhoneNumber"
+                  value={formData.institutionPhoneNumber}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${formErrors.institutionPhoneNumber ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {formErrors.institutionPhoneNumber && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.institutionPhoneNumber}</p>
+                )}
               </div>
 
               {/* County */}
@@ -739,7 +760,7 @@ const MoeInstitution = () => {
       </div>
 
       {isProgramModalOpen && selectedInstitutionForModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
                 <div className="p-6 border-b">
                     <div className="flex justify-between items-center">
