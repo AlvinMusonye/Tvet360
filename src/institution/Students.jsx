@@ -1,104 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Search, Filter, ChevronDown } from 'lucide-react';
+import { Search, Filter, ChevronDown, Plus, X } from 'lucide-react';
 
 // Mock Data
-const mockStudents = [
-  {
-    id: 1,
-    studentName: "John Doe",
-    studentAdmissionNumber: "ADM001",
-    studentNumber: "STU001",
-    program: "Computer Science",
-    studentCurrentStatus: "Active",
-    studentGender: "Male",
-    institution: "Nairobi Technical Institute",
-    county: "Nairobi",
-    socioEconomicStatus: "Low Income",
-    isRural: false,
-    isRPL: false,
-    isNYS: false,
-    enrollmentDate: "2023-01-15"
-  },
-  {
-    id: 2,
-    studentName: "Jane Smith",
-    studentAdmissionNumber: "ADM002",
-    studentNumber: "STU002",
-    program: "Electrical Engineering",
-    studentCurrentStatus: "Active",
-    studentGender: "Female",
-    institution: "Mombasa Technical Institute",
-    county: "Mombasa",
-    socioEconomicStatus: "Middle Income",
-    isRural: true,
-    isRPL: true,
-    isNYS: false,
-    enrollmentDate: "2023-02-20"
-  }
-];
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
 
-// Mock data responses
-const mockData = {
-  socioEconomic: {
-    total: 1500,
-    lowIncome: 700,
-    middleIncome: 600,
-    highIncome: 200,
-    byProgram: [
-      { program: "Computer Science", count: 300, lowIncome: 150, middleIncome: 100, highIncome: 50 },
-      { program: "Electrical Engineering", count: 250, lowIncome: 120, middleIncome: 100, highIncome: 30 },
-    ],
-    byInstitution: [
-      { institution: "Nairobi Technical Institute", count: 500, lowIncome: 250, middleIncome: 200, highIncome: 50 },
-      { institution: "Mombasa Technical Institute", count: 400, lowIncome: 200, middleIncome: 150, highIncome: 50 },
-    ],
-    byCounty: [
-      { county: "Nairobi", count: 700, lowIncome: 300, middleIncome: 300, highIncome: 100 },
-      { county: "Mombasa", count: 400, lowIncome: 200, middleIncome: 150, highIncome: 50 },
-    ]
-  },
-  ruralEnrollment: {
-    total: 450,
-    byProgram: [
-      { program: "Agriculture", count: 150 },
-      { program: "Veterinary", count: 100 },
-    ],
-    byInstitution: [
-      { institution: "Nairobi Technical Institute", count: 200 },
-      { institution: "Mombasa Technical Institute", count: 150 },
-    ],
-    byCounty: [
-      { county: "Nairobi", count: 200 },
-      { county: "Mombasa", count: 150 },
-    ]
-  },
-  rplUptake: {
-    total: 200,
-    byProgram: [
-      { program: "Masonry", count: 80 },
-      { program: "Carpentry", count: 70 },
-    ],
-    byInstitution: [
-      { institution: "Nairobi Technical Institute", count: 100 },
-      { institution: "Mombasa Technical Institute", count: 80 },
-    ],
-    byCounty: [
-      { county: "Nairobi", count: 120 },
-      { county: "Mombasa", count: 80 },
-    ]
-  },
-  nysEnrollment: {
-    total: 300,
-    byProgram: [
-      { program: "Security", count: 120 },
-      { program: "Hospitality", count: 90 },
-    ],
-    byInstitution: [
-      { institution: "Nairobi Technical Institute", count: 150 },
-      { institution: "Mombasa Technical Institute", count: 100 },
-    ]
-  }
+const initialFilters = {
+  programCode: 'all',
+  studentCurrentStatus: 'all',
+  studentGender: 'all',
+  studentSocioEconomicStatus: 'all',
+  studentDisabilityStatus: 'all',
+  studentRuralLearner: 'all',
+  studentNYSEnrollment: 'all',
+  studentDualApprenticeship: 'all',
+  studentRPLStatus: 'all',
+  ethnicGroupId: '',
+  wardId: '',
+  enrollmentDateStart: '',
+  enrollmentDateEnd: '',
+  completionDateStart: '',
+  completionDateEnd: '',
+  attendanceRateMin: '',
+  attendanceRateMax: '',
+  dropoutRiskMin: '',
+  dropoutRiskMax: '',
 };
 
 const Students = () => {
@@ -108,153 +34,96 @@ const Students = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [students, setStudents] = useState(mockStudents);
-  const [socioEconomicData, setSocioEconomicData] = useState(null);
-  const [filters, setFilters] = useState({
-    program: 'all',
-    status: 'all',
-    gender: 'all'
+  const [students, setStudents] = useState([]);
+  const [filters, setFilters] = useState(initialFilters);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [newStudentData, setNewStudentData] = useState({
+    studentAdmissionNumber: "",
+    studentNumber: "",
+    studentName: "",
+    studentReportingStatus: "REPORTED",
+    studentGender: "Male",
+    studentDateOfBirth: "",
+    studentSocioEconomicStatus: "Low Income",
+    studentDisabilityStatus: false,
+    studentRuralLearner: false,
+    studentEnrollmentDate: "",
+    studentExpectedCompletionDate: "",
+    studentCurrentStatus: "Active",
+    studentAttendanceRate: 0.1,
+    studentDropoutRisk: 0.1,
+    studentNYSEnrollment: false,
+    studentDualApprenticeship: false,
+    studentRPLStatus: false,
+    ethnicGroupId: 0,
+    programCode: "",
+    wardId: 0
   });
 
   // Mock data fetch functions
   const fetchStudents = async () => {
     setLoading(true);
+    setError(null);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setStudents(mockStudents);
-      setSocioEconomicData(null);
+      const response = await fetch(`${API_BASE_URL}/api/v1/student-enrollment/student-dtl`, {
+        headers: { 'Authorization': `Bearer ${currentUser?.token}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch students');
+      const data = await response.json();
+      setStudents(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError('Failed to fetch students');
+      setError(err.message || 'Failed to fetch students');
       console.error('Fetch error:', err);
+      setStudents([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Socio-Economic Data
-  const fetchSocioEconomicData = async () => {
+  const handleEnrollStudent = async (e) => {
+    e.preventDefault();
     setLoading(true);
+    setError(null);
+    setSuccessMessage('');
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setSocioEconomicData(mockData.socioEconomic);
-    } catch (err) {
-      setError('Failed to fetch socio-economic data');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const payload = {
+            ...newStudentData,
+            studentAttendanceRate: parseFloat(newStudentData.studentAttendanceRate) || 0,
+            studentDropoutRisk: parseFloat(newStudentData.studentDropoutRisk) || 0,
+            ethnicGroupId: parseInt(newStudentData.ethnicGroupId) || 0,
+            wardId: parseInt(newStudentData.wardId) || 0,
+        };
 
-  const fetchSocioEconomicByProgram = async (programCode = '') => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const data = programCode 
-        ? mockData.socioEconomic.byProgram.find(p => 
-            p.program.toLowerCase().includes(programCode.toLowerCase())
-          ) || mockData.socioEconomic.byProgram
-        : mockData.socioEconomic.byProgram;
-      setSocioEconomicData({ 
-        ...mockData.socioEconomic, 
-        byProgram: Array.isArray(data) ? data : [data] 
-      });
-    } catch (err) {
-      setError('Failed to fetch program data');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const response = await fetch(`${API_BASE_URL}/api/v1/student-enrollment/create`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentUser?.token}`,
+            },
+            body: JSON.stringify(payload),
+        });
 
-  // Rural Enrollment
-  const fetchRuralEnrollment = async () => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setSocioEconomicData(mockData.ruralEnrollment);
-    } catch (err) {
-      setError('Failed to fetch rural enrollment data');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.message || 'Failed to enroll student');
+        }
+        
+        setShowEnrollModal(false);
+        fetchStudents(); // Refresh student list
+        setSuccessMessage(result.message || 'Student enrolled successfully!');
+        setTimeout(() => setSuccessMessage(''), 5000); // Hide after 5 seconds
+        setNewStudentData({ // Reset form
+            studentAdmissionNumber: "", studentNumber: "", studentName: "", studentReportingStatus: "REPORTED", studentGender: "Male", studentDateOfBirth: "", studentSocioEconomicStatus: "Low Income", studentDisabilityStatus: false, studentRuralLearner: false, studentEnrollmentDate: "", studentExpectedCompletionDate: "", studentCurrentStatus: "Active", studentAttendanceRate: 0.1, studentDropoutRisk: 0.1, studentNYSEnrollment: false, studentDualApprenticeship: false, studentRPLStatus: false, ethnicGroupId: 0, programCode: "", wardId: 0
+        });
 
-  const fetchRuralEnrollmentByProgram = async () => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setSocioEconomicData({ 
-        ...mockData.ruralEnrollment, 
-        byProgram: mockData.ruralEnrollment.byProgram 
-      });
     } catch (err) {
-      setError('Failed to fetch rural enrollment by program');
-      console.error('Error:', err);
+        setError(err.message);
+        console.error('Enrollment error:', err);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
-
-  // RPL Uptake
-  const fetchRplUptake = async () => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setSocioEconomicData(mockData.rplUptake);
-    } catch (err) {
-      setError('Failed to fetch RPL uptake data');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchRplUptakeByProgram = async () => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setSocioEconomicData({ 
-        ...mockData.rplUptake, 
-        byProgram: mockData.rplUptake.byProgram 
-      });
-    } catch (err) {
-      setError('Failed to fetch RPL uptake by program');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // NYS Enrollment
-  const fetchNysEnrollment = async () => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setSocioEconomicData(mockData.nysEnrollment);
-    } catch (err) {
-      setError('Failed to fetch NYS enrollment data');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchNysEnrollmentByProgram = async () => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setSocioEconomicData({ 
-        ...mockData.nysEnrollment, 
-        byProgram: mockData.nysEnrollment.byProgram 
-      });
-    } catch (err) {
-      setError('Failed to fetch NYS enrollment by program');
-      console.error('Error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+};
 
   // Handle filter selection
   const handleFilterSelect = async (filter) => {
@@ -263,42 +132,27 @@ const Students = () => {
     
     try {
       if (filter === 'all') {
-        setFilters({ program: 'all', status: 'all', gender: 'all' });
+        setFilters(initialFilters);
         setSearchTerm('');
         await fetchStudents();
-      } 
-      // Socio-Economic Filters
-      else if (filter === 'socioEconomic') {
-        await fetchSocioEconomicData();
-      } 
-      else if (filter === 'socioEconomicByProgram') {
-        await fetchSocioEconomicByProgram();
-      }
-      // Rural Enrollment Filters
-      else if (filter === 'ruralEnrollment') {
-        await fetchRuralEnrollment();
-      }
-      else if (filter === 'ruralEnrollmentByProgram') {
-        await fetchRuralEnrollmentByProgram();
-      }
-      // RPL Uptake Filters
-      else if (filter === 'rplUptake') {
-        await fetchRplUptake();
-      }
-      else if (filter === 'rplUptakeByProgram') {
-        await fetchRplUptakeByProgram();
-      }
-      // NYS Enrollment Filters
-      else if (filter === 'nysEnrollment') {
-        await fetchNysEnrollment();
-      }
-      else if (filter === 'nysEnrollmentByProgram') {
-        await fetchNysEnrollmentByProgram();
       }
     } catch (err) {
       console.error('Error in handleFilterSelect:', err);
       setError(`Failed to load data: ${err.message}`);
     }
+  };
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNewStudentChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setNewStudentData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   // Apply filters and search
@@ -307,12 +161,28 @@ const Students = () => {
         const matchesSearch = 
           (student.studentName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
           (student.studentAdmissionNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-          (student.studentNumber || '').includes(searchTerm);
+          (student.studentNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase());
         
         const matchesFilters = 
-          (filters.program === 'all' || student.program === filters.program) &&
-          (filters.status === 'all' || student.studentCurrentStatus === filters.status) &&
-          (filters.gender === 'all' || student.studentGender === filters.gender);
+          (filters.programCode === 'all' || student.programCode === filters.programCode) &&
+          (filters.studentCurrentStatus === 'all' || student.studentCurrentStatus === filters.studentCurrentStatus) &&
+          (filters.studentGender === 'all' || student.studentGender === filters.studentGender) &&
+          (filters.studentSocioEconomicStatus === 'all' || student.studentSocioEconomicStatus === filters.studentSocioEconomicStatus) &&
+          (filters.studentDisabilityStatus === 'all' || String(student.studentDisabilityStatus) === filters.studentDisabilityStatus) &&
+          (filters.studentRuralLearner === 'all' || String(student.studentRuralLearner) === filters.studentRuralLearner) &&
+          (filters.studentNYSEnrollment === 'all' || String(student.studentNYSEnrollment) === filters.studentNYSEnrollment) &&
+          (filters.studentDualApprenticeship === 'all' || String(student.studentDualApprenticeship) === filters.studentDualApprenticeship) &&
+          (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus) &&
+          (filters.ethnicGroupId === '' || String(student.ethnicGroupId) === filters.ethnicGroupId) &&
+          (filters.wardId === '' || String(student.wardId) === filters.wardId) &&
+          (!filters.enrollmentDateStart || new Date(student.studentEnrollmentDate) >= new Date(filters.enrollmentDateStart)) &&
+          (!filters.enrollmentDateEnd || new Date(student.studentEnrollmentDate) <= new Date(filters.enrollmentDateEnd)) &&
+          (!filters.completionDateStart || new Date(student.studentExpectedCompletionDate) >= new Date(filters.completionDateStart)) &&
+          (!filters.completionDateEnd || new Date(student.studentExpectedCompletionDate) <= new Date(filters.completionDateEnd)) &&
+          (filters.attendanceRateMin === '' || student.studentAttendanceRate >= parseFloat(filters.attendanceRateMin)) &&
+          (filters.attendanceRateMax === '' || student.studentAttendanceRate <= parseFloat(filters.attendanceRateMax)) &&
+          (filters.dropoutRiskMin === '' || student.studentDropoutRisk >= parseFloat(filters.dropoutRiskMin)) &&
+          (filters.dropoutRiskMax === '' || student.studentDropoutRisk <= parseFloat(filters.dropoutRiskMax));
         
         return matchesSearch && matchesFilters;
       })
@@ -341,6 +211,13 @@ const Students = () => {
         </div>
         
         <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => setShowEnrollModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            Enroll Student
+          </button>
           {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -365,7 +242,7 @@ const Students = () => {
             </button>
 
             {showFilterDropdown && (
-              <div className="absolute right-0 z-10 w-72 mt-2 origin-top-right bg-white border border-gray-200 rounded-md shadow-lg">
+              <div className="absolute right-0 z-10 w-72 mt-2 origin-top-right bg-white border border-gray-200 rounded-md shadow-lg max-h-96 overflow-y-auto">
                 <div className="p-2 space-y-1">
                   <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">General</div>
                   <button
@@ -377,91 +254,71 @@ const Students = () => {
                     All Students
                   </button>
 
-                  <div className="border-t border-gray-100 my-1"></div>
-                  
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Socio-Economic</div>
-                  <button
-                    onClick={() => handleFilterSelect('socioEconomic')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${
-                      activeFilter === 'socioEconomic' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Total Socio-Economic Enrollment
-                  </button>
-                  <button
-                    onClick={() => handleFilterSelect('socioEconomicByProgram')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${
-                      activeFilter === 'socioEconomicByProgram' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    By Program
-                  </button>
-
-                  <div className="border-t border-gray-100 my-1"></div>
-                  
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">Rural Learners</div>
-                  <button
-                    onClick={() => handleFilterSelect('ruralEnrollment')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${
-                      activeFilter === 'ruralEnrollment' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Total Rural Enrollment
-                  </button>
-                  <button
-                    onClick={() => handleFilterSelect('ruralEnrollmentByProgram')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${
-                      activeFilter === 'ruralEnrollmentByProgram' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    By Program
-                  </button>
-
-                  <div className="border-t border-gray-100 my-1"></div>
-                  
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">RPL Uptake</div>
-                  <button
-                    onClick={() => handleFilterSelect('rplUptake')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${
-                      activeFilter === 'rplUptake' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Total RPL Uptake
-                  </button>
-                  <button
-                    onClick={() => handleFilterSelect('rplUptakeByProgram')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${
-                      activeFilter === 'rplUptakeByProgram' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    By Program
-                  </button>
-
-                  <div className="border-t border-gray-100 my-1"></div>
-                  
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">NYS Enrollment</div>
-                  <button
-                    onClick={() => handleFilterSelect('nysEnrollment')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${
-                      activeFilter === 'nysEnrollment' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Total NYS Enrollment
-                  </button>
-                  <button
-                    onClick={() => handleFilterSelect('nysEnrollmentByProgram')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${
-                      activeFilter === 'nysEnrollmentByProgram' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    By Program
-                  </button>
+                  {activeFilter === 'all' && (
+                    <div className="p-2 space-y-2 border-t mt-2">
+                      <h4 className="px-2 text-xs font-semibold text-gray-500 uppercase">Filter List</h4>
+                      <div>
+                        <label className="text-xs text-gray-600">Gender</label>
+                        <select name="studentGender" value={filters.studentGender} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">
+                          <option value="all">All</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600">Socio-Economic Status</label>
+                        <select name="studentSocioEconomicStatus" value={filters.studentSocioEconomicStatus} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">
+                          <option value="all">All</option>
+                          <option value="Low Income">Low Income</option>
+                          <option value="Middle Income">Middle Income</option>
+                          <option value="High Income">High Income</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600">Disability</label>
+                        <select name="studentDisabilityStatus" value={filters.studentDisabilityStatus} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">
+                          <option value="all">All</option>
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600">Rural Learner</label>
+                        <select name="studentRuralLearner" value={filters.studentRuralLearner} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">
+                          <option value="all">All</option>
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
+                        </select>
+                      </div>
+                       <div>
+                        <label className="text-xs text-gray-600">Current Status</label>
+                        <select name="studentCurrentStatus" value={filters.studentCurrentStatus} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">
+                          <option value="all">All</option>
+                          <option value="Active">Active</option>
+                          <option value="Inactive">Inactive</option>
+                          <option value="Graduated">Graduated</option>
+                          <option value="Dropped Out">Dropped Out</option>
+                        </select>
+                      </div>
+                      <button onClick={() => setFilters(initialFilters)} className="w-full text-center text-sm text-blue-600 hover:underline">
+                        Reset Filters
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {/* Display success message */}
+      {successMessage && (
+        <div className="p-4 mb-4 text-green-700 bg-green-100 rounded-md">
+          {successMessage}
+        </div>
+      )}
 
       {/* Display loading state */}
       {loading && (
@@ -477,8 +334,7 @@ const Students = () => {
 
       {/* Display data based on active filter */}
       {!loading && !error && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          {activeFilter === 'all' ? (
+        <div className="bg-white rounded-lg shadow overflow-hidden mt-6">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -491,7 +347,7 @@ const Students = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredStudents.map((student) => (
-                  <tr key={student.id} className="hover:bg-gray-50">
+                  <tr key={student.studentAdmissionNumber} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="ml-4">
@@ -504,7 +360,7 @@ const Students = () => {
                       {student.studentAdmissionNumber}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {student.program}
+                      {student.programCode || student.program}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -516,113 +372,140 @@ const Students = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(student.enrollmentDate)}
+                      {student.studentEnrollmentDate ? formatDate(student.studentEnrollmentDate) : 'N/A'}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          ) : (
-            <div className="p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">
-                {activeFilter === 'socioEconomic' && 'Socio-Economic Enrollment'}
-                {activeFilter === 'socioEconomicByProgram' && 'Socio-Economic by Program'}
-                {activeFilter === 'ruralEnrollment' && 'Rural Enrollment'}
-                {activeFilter === 'ruralEnrollmentByProgram' && 'Rural Enrollment by Program'}
-                {activeFilter === 'rplUptake' && 'RPL Uptake'}
-                {activeFilter === 'rplUptakeByProgram' && 'RPL Uptake by Program'}
-                {activeFilter === 'nysEnrollment' && 'NYS Enrollment'}
-                {activeFilter === 'nysEnrollmentByProgram' && 'NYS Enrollment by Program'}
-              </h2>
-              
-              {socioEconomicData && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="text-sm font-medium text-blue-800">Total</h3>
-                    <p className="text-2xl font-bold text-blue-600">{socioEconomicData.total || 0}</p>
-                  </div>
-                  
-                  {socioEconomicData.lowIncome !== undefined && (
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <h3 className="text-sm font-medium text-green-800">Low Income</h3>
-                      <p className="text-2xl font-bold text-green-600">{socioEconomicData.lowIncome}</p>
-                    </div>
-                  )}
-                  
-                  {socioEconomicData.middleIncome !== undefined && (
-                    <div className="bg-yellow-50 p-4 rounded-lg">
-                      <h3 className="text-sm font-medium text-yellow-800">Middle Income</h3>
-                      <p className="text-2xl font-bold text-yellow-600">{socioEconomicData.middleIncome}</p>
-                    </div>
-                  )}
-                  
-                  {socioEconomicData.highIncome !== undefined && (
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <h3 className="text-sm font-medium text-purple-800">High Income</h3>
-                      <p className="text-2xl font-bold text-purple-600">{socioEconomicData.highIncome}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Display data tables for specific filters */}
-              {socioEconomicData?.byProgram && (
-                <div className="mt-6">
-                  <h3 className="text-md font-medium text-gray-900 mb-2">
-                    {activeFilter.includes('Program') ? 'Program Data' : 'By Program'}
-                  </h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {activeFilter.includes('socioEconomic') ? 'Program' : 
-                             activeFilter.includes('rural') ? 'Program' : 
-                             activeFilter.includes('rpl') ? 'Program' : 
-                             activeFilter.includes('nys') ? 'Program' : 'Name'}
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                          {socioEconomicData.byProgram[0]?.lowIncome !== undefined && (
-                            <>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Low Income</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Middle Income</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">High Income</th>
-                            </>
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {socioEconomicData.byProgram.map((item, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {item.program || item.institution || item.county}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {item.count}
-                            </td>
-                            {item.lowIncome !== undefined && (
-                              <>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {item.lowIncome}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {item.middleIncome}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {item.highIncome}
-                                </td>
-                              </>
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+        </div>
+      )}
 
+      {showEnrollModal && (
+        <div className="fixed inset-0  bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-semibold text-gray-800">Enroll New Student</h3>
+                <button onClick={() => setShowEnrollModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
             </div>
-          )}
+            <form onSubmit={handleEnrollStudent} className="p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="studentName" className="block text-sm font-medium text-gray-700">Student Name</label>
+                  <input id="studentName" name="studentName" value={newStudentData.studentName} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md" required />
+                </div>
+                <div>
+                  <label htmlFor="studentAdmissionNumber" className="block text-sm font-medium text-gray-700">Admission Number</label>
+                  <input id="studentAdmissionNumber" name="studentAdmissionNumber" value={newStudentData.studentAdmissionNumber} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md" required />
+                </div>
+                <div>
+                  <label htmlFor="studentNumber" className="block text-sm font-medium text-gray-700">Student Number (ID/Passport/Birth Cert)</label>
+                  <input id="studentNumber" name="studentNumber" value={newStudentData.studentNumber} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md" placeholder="ID, Passport, or Birth Cert No." required />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="studentGender" className="block text-sm font-medium text-gray-700">Gender</label>
+                  <select id="studentGender" name="studentGender" value={newStudentData.studentGender} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="studentDateOfBirth" className="block text-sm font-medium text-gray-700">Date of Birth</label>
+                  <input id="studentDateOfBirth" type="date" name="studentDateOfBirth" value={newStudentData.studentDateOfBirth} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md" required />
+                </div>
+                <div>
+                  <label htmlFor="studentSocioEconomicStatus" className="block text-sm font-medium text-gray-700">Socio-Economic Status</label>
+                  <select id="studentSocioEconomicStatus" name="studentSocioEconomicStatus" value={newStudentData.studentSocioEconomicStatus} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md">
+                    <option value="Low Income">Low Income</option>
+                    <option value="Middle Income">Middle Income</option>
+                    <option value="High Income">High Income</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="programCode" className="block text-sm font-medium text-gray-700">Program Code</label>
+                  <input id="programCode" name="programCode" value={newStudentData.programCode} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md" required />
+                </div>
+                <div>
+                  <label htmlFor="studentCurrentStatus" className="block text-sm font-medium text-gray-700">Current Status</label>
+                  <select id="studentCurrentStatus" name="studentCurrentStatus" value={newStudentData.studentCurrentStatus} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Graduated">Graduated</option>
+                    <option value="Dropped Out">Dropped Out</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="studentReportingStatus" className="block text-sm font-medium text-gray-700">Reporting Status</label>
+                  <select id="studentReportingStatus" name="studentReportingStatus" value={newStudentData.studentReportingStatus} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md">
+                    <option value="REPORTED">Reported</option>
+                    <option value="NOT_REPORTED">Not Reported</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="studentEnrollmentDate" className="block text-sm font-medium text-gray-700">Enrollment Date</label>
+                  <input id="studentEnrollmentDate" type="date" name="studentEnrollmentDate" value={newStudentData.studentEnrollmentDate} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md" required />
+                </div>
+                <div>
+                  <label htmlFor="studentExpectedCompletionDate" className="block text-sm font-medium text-gray-700">Expected Completion Date</label>
+                  <input id="studentExpectedCompletionDate" type="date" name="studentExpectedCompletionDate" value={newStudentData.studentExpectedCompletionDate} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md" required />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="studentAttendanceRate" className="block text-sm font-medium text-gray-700">Attendance Rate (0-1)</label>
+                  <input id="studentAttendanceRate" type="number" step="0.01" min="0" max="1" name="studentAttendanceRate" value={newStudentData.studentAttendanceRate} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md" />
+                </div>
+                <div>
+                  <label htmlFor="studentDropoutRisk" className="block text-sm font-medium text-gray-700">Dropout Risk (0-1)</label>
+                  <input id="studentDropoutRisk" type="number" step="0.01" min="0" max="1" name="studentDropoutRisk" value={newStudentData.studentDropoutRisk} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md" />
+                </div>
+              </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="ethnicGroupId" className="block text-sm font-medium text-gray-700">Ethnic Group ID</label>
+                  <input id="ethnicGroupId" type="number" name="ethnicGroupId" value={newStudentData.ethnicGroupId} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md" />
+                </div>
+                <div>
+                  <label htmlFor="wardId" className="block text-sm font-medium text-gray-700">Ward ID</label>
+                  <input id="wardId" type="number" name="wardId" value={newStudentData.wardId} onChange={handleNewStudentChange} className="mt-1 p-2 block w-full border rounded-md" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-center">
+                <label className="flex items-center gap-2"><input type="checkbox" name="studentDisabilityStatus" checked={newStudentData.studentDisabilityStatus} onChange={handleNewStudentChange} /> Disabled</label>
+                <label className="flex items-center gap-2"><input type="checkbox" name="studentRuralLearner" checked={newStudentData.studentRuralLearner} onChange={handleNewStudentChange} /> Rural</label>
+                <label className="flex items-center gap-2"><input type="checkbox" name="studentNYSEnrollment" checked={newStudentData.studentNYSEnrollment} onChange={handleNewStudentChange} /> NYS</label>
+                <label className="flex items-center gap-2"><input type="checkbox" name="studentDualApprenticeship" checked={newStudentData.studentDualApprenticeship} onChange={handleNewStudentChange} /> Dual Apprenticeship</label>
+                <label className="flex items-center gap-2"><input type="checkbox" name="studentRPLStatus" checked={newStudentData.studentRPLStatus} onChange={handleNewStudentChange} /> RPL</label>
+              </div>
+              <div className="p-4 bg-gray-50 border-t text-right space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEnrollModal(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
+                >
+                  {loading ? 'Enrolling...' : 'Enroll Student'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

@@ -3,26 +3,41 @@ import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { navigationItems } from './navigation';
 import { LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  // Get the first two path segments to handle nested routes like /institution/students
-  const pathSegments = location.pathname.split('/').filter(Boolean);
-  const currentPath = pathSegments[0] || 'moe';
+  const { currentUser, logout } = useAuth();
+
+  const getNavKeyFromRole = (role) => {
+    const upperCaseRole = role?.toUpperCase();
+    switch (upperCaseRole) {
+      case 'MINISTRY_OF_EDUCATION_ADMIN':
+      case 'MOE_ADMIN':
+        return 'moe';
+      case 'INSTITUTION_ADMIN':
+        return 'institution';
+      case 'SP_ADMIN':
+        return 'sp';
+      default:
+        // Fallback for safety, though a logged-in user should have a role.
+        const pathSegments = location.pathname.split('/').filter(Boolean);
+        return pathSegments[0] || 'moe';
+    }
+  };
+
+  const navKey = getNavKeyFromRole(currentUser?.role);
+
   const isActive = (path) => {
     // Match exact path or nested path
     return location.pathname === path || 
-           (path !== `/${currentPath}` && location.pathname.startsWith(`${path}/`));
+           (path !== `/${navKey}` && location.pathname.startsWith(`${path}/`));
   };
-  const currentNavItems = navigationItems[currentPath] || navigationItems.moe;
+  const currentNavItems = navigationItems[navKey] || navigationItems.moe;
 
   const handleLogout = () => {
-    // Add your logout logic here
-    console.log('Logging out...');
-    // Clear auth state, tokens, etc.
-    localStorage.removeItem('authToken'); // If you're using tokens
-    // Then redirect to login
+    logout();
     navigate('/');
   };
 
@@ -43,7 +58,7 @@ const Sidebar = () => {
               <NavLink
                 to={item.path}
                 className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-                  isActive(item.path) || location.pathname === item.path
+                  isActive(item.path)
                     ? 'bg-[var(--color-primary)] text-white'
                     : 'text-[var(--color-text)] hover:bg-[var(--color-primary-light)] hover:bg-opacity-10'
                 }`}

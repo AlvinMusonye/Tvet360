@@ -20,11 +20,17 @@ const MoeInstitution = () => {
   const [loadingProgramData, setLoadingProgramData] = useState(false);
   const [isProgramModalOpen, setIsProgramModalOpen] = useState(false);
   const [innovationIndexData, setInnovationIndexData] = useState([]);
+  const [selectedCountyForDigitalLiteracy, setSelectedCountyForDigitalLiteracy] = useState('');
+  const [digitalLiteracyData, setDigitalLiteracyData] = useState(null);
+  const [loadingDigitalLiteracy, setLoadingDigitalLiteracy] = useState(false);
+  const [availableCounties, setAvailableCounties] = useState([]);
   const [error, setError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
     institutionRegistrationNumber: '',
     institutionName: '',
+    principalName: '',
+    principalContact: '',
     institutionCounty: '',
     institutionType: 'INSTITUTE_OF_TECHNOLOGY',
     institutionAddress: '',
@@ -43,6 +49,61 @@ const MoeInstitution = () => {
     }
   }, [currentUser?.token]);
 
+  useEffect(() => {
+    if (allInstitutions.length > 0) {
+        const counties = [...new Set(allInstitutions.map(inst => inst.institutionCounty).filter(Boolean))].sort();
+        setAvailableCounties(counties);
+    }
+  }, [allInstitutions]);
+
+  useEffect(() => {
+    const fetchDigitalLiteracyDataForCounty = async () => {
+        if (!selectedCountyForDigitalLiteracy) {
+            setDigitalLiteracyData(null);
+            return;
+        }
+        setLoadingDigitalLiteracy(true);
+        setDigitalLiteracyData(null); // Clear old data
+
+        const institutionsInCounty = allInstitutions.filter(
+            inst => inst.institutionCounty === selectedCountyForDigitalLiteracy
+        );
+
+        if (institutionsInCounty.length === 0) {
+            setLoadingDigitalLiteracy(false);
+            return;
+        }
+
+        try {
+            const promises = institutionsInCounty.map(inst =>
+                fetch(`${API_BASE_URL}/api/v1/program/get-prog-dgtl-lt-inst?institutionRegistrationNumber=${inst.institutionRegistrationNumber}`, {
+                    headers: { 'Authorization': `Bearer ${currentUser?.token}` }
+                }).then(res => res.json())
+            );
+
+            const results = await Promise.all(promises);
+
+            const aggregatedData = results.reduce((acc, result) => {
+                if (result.status === 200 && result.data) {
+                    acc.programsWithDigitalLiteracy += result.data.programsWithDigitalLiteracy || 0;
+                    acc.programsWithoutDigitalLiteracy += result.data.programsWithoutDigitalLiteracy || 0;
+                }
+                return acc;
+            }, { programsWithDigitalLiteracy: 0, programsWithoutDigitalLiteracy: 0 });
+
+            setDigitalLiteracyData(aggregatedData);
+
+        } catch (error) {
+            console.error("Error fetching digital literacy data for county:", error);
+            setDigitalLiteracyData(null);
+        } finally {
+            setLoadingDigitalLiteracy(false);
+        }
+    };
+
+    fetchDigitalLiteracyDataForCounty();
+  }, [selectedCountyForDigitalLiteracy, allInstitutions, currentUser?.token]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -55,6 +116,8 @@ const MoeInstitution = () => {
     const errors = {};
     if (!formData.institutionRegistrationNumber.trim()) errors.institutionRegistrationNumber = 'Registration number is required';
     if (!formData.institutionName.trim()) errors.institutionName = 'Institution name is required';
+    if (!formData.principalName.trim()) errors.principalName = 'Principal name is required';
+    if (!formData.principalContact.trim()) errors.principalContact = 'Principal contact is required';
     if (!formData.institutionCounty.trim()) errors.institutionCounty = 'County is required';
     if (!formData.institutionAddress.trim()) errors.institutionAddress = 'Address is required';
     if (isNaN(formData.institutionGovernanceScore) || formData.institutionGovernanceScore < 0 || formData.institutionGovernanceScore > 100) {
@@ -124,6 +187,8 @@ const MoeInstitution = () => {
       setFormData({
         institutionRegistrationNumber: '',
         institutionName: '',
+        principalName: '',
+        principalContact: '',
         institutionCounty: '',
         institutionType: 'INSTITUTE_OF_TECHNOLOGY',
         institutionAddress: '',
@@ -322,6 +387,38 @@ const MoeInstitution = () => {
                 )}
               </div>
 
+              {/* Principal Name */}
+              <div>
+                <label htmlFor="principalName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Principal Name *
+                </label>
+                <input
+                  type="text"
+                  id="principalName"
+                  name="principalName"
+                  value={formData.principalName}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${formErrors.principalName ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {formErrors.principalName && <p className="mt-1 text-sm text-red-600">{formErrors.principalName}</p>}
+              </div>
+
+              {/* Principal Contact */}
+              <div>
+                <label htmlFor="principalContact" className="block text-sm font-medium text-gray-700 mb-1">
+                  Principal Contact *
+                </label>
+                <input
+                  type="text"
+                  id="principalContact"
+                  name="principalContact"
+                  value={formData.principalContact}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${formErrors.principalContact ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {formErrors.principalContact && <p className="mt-1 text-sm text-red-600">{formErrors.principalContact}</p>}
+              </div>
+
               {/* County */}
               <div>
                 <label htmlFor="institutionCounty" className="block text-sm font-medium text-gray-700 mb-1">
@@ -497,11 +594,9 @@ const MoeInstitution = () => {
               onChange={(e) => setSelectedType(e.target.value)}
             >
               <option value="All">All Types</option>
-              {Array.isArray(institutionTypes) && institutionTypes.map((type) => (
-                <option key={type.type} value={type.type}>
-                  {type.type}
-                </option>
-              ))}
+              <option value="NATIONAL_POLYTECHNIC">Polytechnic</option>
+              <option value="INSTITUTE_OF_TECHNOLOGY">Institute of Technology</option>
+              <option value="TECHNICAL_VOCATIONAL_COLLEGE">TTI &amp; TVCs</option>
             </select>
           </div>
         </div>
@@ -521,6 +616,62 @@ const MoeInstitution = () => {
               <p className="text-2xl font-semibold text-gray-800">{totalInstitutions}</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Institutions Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden mb-8">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Institution Name
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Registration No.
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  County
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Accreditation
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredInstitutions.length > 0 ? (
+                filteredInstitutions.map((inst) => (
+                  <tr key={inst.institutionRegistrationNumber} onClick={() => handleInstitutionClick(inst)} className="hover:bg-gray-50 cursor-pointer">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {inst.institutionName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {inst.institutionRegistrationNumber}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {inst.institutionCounty}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{inst.institutionType}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.institutionAccreditationStatus === 'ACCREDITED' ? 'bg-green-100 text-green-800' : inst.institutionAccreditationStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                        {inst.institutionAccreditationStatus}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                    No institutions found matching your criteria
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -587,62 +738,6 @@ const MoeInstitution = () => {
         </div>
       </div>
 
-      {/* Institutions Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden mb-8">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Institution Name
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Registration No.
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  County
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Accreditation
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInstitutions.length > 0 ? (
-                filteredInstitutions.map((inst) => (
-                  <tr key={inst.institutionRegistrationNumber} onClick={() => handleInstitutionClick(inst)} className="hover:bg-gray-50 cursor-pointer">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {inst.institutionName}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {inst.institutionRegistrationNumber}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {inst.institutionCounty}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{inst.institutionType}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.institutionAccreditationStatus === 'ACCREDITED' ? 'bg-green-100 text-green-800' : inst.institutionAccreditationStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                        {inst.institutionAccreditationStatus}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                    No institutions found matching your criteria
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
       {isProgramModalOpen && selectedInstitutionForModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
@@ -696,6 +791,48 @@ const MoeInstitution = () => {
             </div>
         </div>
       )}
+
+      {/* Digital Literacy Section */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mt-8 border border-gray-200">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Digital Literacy Program Analysis by County</h3>
+        <div className="mb-4">
+          <label htmlFor="digital-literacy-county-select" className="block text-sm font-medium text-gray-700 mb-1">
+            Select County
+          </label>
+          <select
+            id="digital-literacy-county-select"
+            value={selectedCountyForDigitalLiteracy}
+            onChange={(e) => setSelectedCountyForDigitalLiteracy(e.target.value)}
+            className="w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">-- Select a County --</option>
+            {availableCounties.map(county => (
+              <option key={county} value={county}>
+                {county}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {loadingDigitalLiteracy ? (
+          <div className="text-center py-4">Loading data...</div>
+        ) : digitalLiteracyData ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 className="text-sm font-medium text-green-800">Programs WITH Digital Literacy</h4>
+              <p className="text-2xl font-bold text-green-600">{digitalLiteracyData.programsWithDigitalLiteracy}</p>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 className="text-sm font-medium text-red-800">Programs WITHOUT Digital Literacy</h4>
+              <p className="text-2xl font-bold text-red-600">{digitalLiteracyData.programsWithoutDigitalLiteracy}</p>
+            </div>
+          </div>
+        ) : selectedCountyForDigitalLiteracy ? (
+          <div className="text-center py-4 text-gray-500">No data available for the selected county.</div>
+        ) : (
+          <div className="text-center py-4 text-gray-500">Please select a county to view digital literacy stats.</div>
+        )}
+      </div>
     </div>
   );
 };

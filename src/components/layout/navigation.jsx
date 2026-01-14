@@ -42,6 +42,11 @@ export const navigationItems = {
       path: '/moe/audit',
       icon: <Gavel size={18} />
     },
+    { 
+      title: 'Financial Management', 
+      path: '/moe/financial', 
+      icon: <DollarSign size={18} /> 
+    },
     { title: 'Settings', path: '/settings', icon: <Settings size={18} /> }
 
   ],
@@ -67,11 +72,7 @@ export const navigationItems = {
   path: '/institution/audit',
   icon: <ClipboardCheck size={18} />
   },
-  { 
-    title: 'Financial Management', 
-    path: '/institution/financial', 
-    icon: <DollarSign size={18} /> 
-  },
+
 
     { title: 'Reports', path: '/institution/reports', icon: <BarChart2 size={18} /> },
     { title: 'Settings', path: '/settings', icon: <Settings size={18} /> }

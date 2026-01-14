@@ -12,7 +12,6 @@ import Staff from './institution/Staff';
 import Programs from './institution/Programs';
 import Reports from './institution/Reports';
 import Infrastructure from './institution/Infrastructure';
-import FinancialManagement from './institution/FinancialManagement';
 import Layout from './components/layout/Layout'; 
 import MoeInstitution from './moe/MoeInstitution';
 import Equity from './moe/Equity';
@@ -24,6 +23,7 @@ import InstitutionAudit from './institution/InstitutionAudit';
 import UserManagement from './moe/UserManagement';
 import Setting from './components/Setting'
 import MoeStudents from './moe/MoeStudents';
+import FinancialManagement from './moe/FinancialManagement';
 
 
 function App() {
@@ -39,12 +39,41 @@ function App() {
             <Moe />
           </ProtectedRoute>
   } />          
-          <Route path="/moe/institutions" element={<MoeInstitution />} />
-          <Route path="/moe/equity" element={<Equity />} />
-          <Route path="/moe/employment" element={<Employment />} />
-          <Route path="/moe/reports" element={<MoeReports />} />
-          <Route path="/moe/audit" element={<MoeAudit />} />
-          <Route path='/moe/students' element={<MoeStudents />} />
+          <Route path="/moe/institutions" element={
+            <ProtectedRoute requiredRole="MINISTRY_OF_EDUCATION_ADMIN">
+              <MoeInstitution />
+            </ProtectedRoute>
+          } />
+          <Route path="/moe/equity" element={
+            <ProtectedRoute requiredRole="MINISTRY_OF_EDUCATION_ADMIN">
+              <Equity />
+            </ProtectedRoute>
+          } />
+          <Route path="/moe/employment" element={
+            <ProtectedRoute requiredRole="MINISTRY_OF_EDUCATION_ADMIN">
+              <Employment />
+            </ProtectedRoute>
+          } />
+          <Route path="/moe/reports" element={
+            <ProtectedRoute requiredRole="MINISTRY_OF_EDUCATION_ADMIN">
+              <MoeReports />
+            </ProtectedRoute>
+          } />
+          <Route path="/moe/audit" element={
+            <ProtectedRoute requiredRole="MINISTRY_OF_EDUCATION_ADMIN">
+              <MoeAudit />
+            </ProtectedRoute>
+          } />
+          <Route path='/moe/students' element={
+            <ProtectedRoute requiredRole="MINISTRY_OF_EDUCATION_ADMIN">
+              <MoeStudents />
+            </ProtectedRoute>
+          } />
+          <Route path='/moe/financial' element={
+            <ProtectedRoute requiredRole="MINISTRY_OF_EDUCATION_ADMIN">
+              <FinancialManagement />
+            </ProtectedRoute>
+          } />
 <Route 
   path="/moe/users" 
   element={
@@ -66,14 +95,41 @@ function App() {
               <Institution />
             </ProtectedRoute>
           } />     
-       <Route path="/institution/students" element={<Students />} />
-          <Route path="/institution/staff" element={<Staff />} />
-          <Route path="/institution/programs" element={<Programs />} />
-          <Route path="/institution/reports" element={<Reports />} />
-          <Route path="/institution/infrastructure" element={<Infrastructure />} />
-          <Route path="/institution/financial" element={<FinancialManagement />} />
-          <Route path="/institution/reports" element={<InstitutionReports />} />
-          <Route path="/institution/audit" element={<InstitutionAudit />} />
+          <Route path="/institution/students" element={
+            <ProtectedRoute requiredRole="INSTITUTION_ADMIN">
+              <Students />
+            </ProtectedRoute>
+          } />
+          <Route path="/institution/staff" element={
+            <ProtectedRoute requiredRole="INSTITUTION_ADMIN">
+              <Staff />
+            </ProtectedRoute>
+          } />
+          <Route path="/institution/programs" element={
+            <ProtectedRoute requiredRole="INSTITUTION_ADMIN">
+              <Programs />
+            </ProtectedRoute>
+          } />
+          <Route path="/institution/reports" element={
+            <ProtectedRoute requiredRole="INSTITUTION_ADMIN">
+              <Reports />
+            </ProtectedRoute>
+          } />
+          <Route path="/institution/infrastructure" element={
+            <ProtectedRoute requiredRole="INSTITUTION_ADMIN">
+              <Infrastructure />
+            </ProtectedRoute>
+          } />
+          <Route path="/institution/reports-dashboard" element={
+            <ProtectedRoute requiredRole="INSTITUTION_ADMIN">
+              <InstitutionReports />
+            </ProtectedRoute>
+          } />
+          <Route path="/institution/audit" element={
+            <ProtectedRoute requiredRole="INSTITUTION_ADMIN">
+              <InstitutionAudit />
+            </ProtectedRoute>
+          } />
         <Route path="/settings" element={
   <ProtectedRoute>
     <Setting />

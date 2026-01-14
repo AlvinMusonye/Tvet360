@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import { 
   BookOpen, Users, TrendingUp, FileText, Printer, Download,
-  Shield, Briefcase, Handshake, BarChart2, AlertTriangle, CheckCircle, School, UserCheck, ChevronLeft, ChevronRight
+  Shield, Briefcase, Handshake, BarChart2, AlertTriangle, CheckCircle, School, UserCheck, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import * as XLSX from 'xlsx';
@@ -33,8 +33,6 @@ const enrollmentData = [
   { program: 'Health Sciences', enrollment: 7200, capacity: 9000, yoyChange: 9 },
 ];
 
-const totalEnrollments = enrollmentData.reduce((sum, item) => sum + item.enrollment, 0);
-
 const MoeReports = () => {
   const { currentUser } = useAuth();
   const reportRef = useRef();
@@ -48,6 +46,31 @@ const MoeReports = () => {
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [viewingReport, setViewingReport] = useState(null);
+  const [totalEnrollments, setTotalEnrollments] = useState(0);
+  const [averageEnrollment, setAverageEnrollment] = useState(0);
+
+  const enrollmentTrends = {
+    yearlyComparison: [
+      { year: '2022', students: 42000 },
+      { year: '2023', students: 45500 },
+      { year: '2024', students: 48000 },
+    ],
+    monthlyTrend: [
+      { name: 'Jan', current: 4000, last: 3800 },
+      { name: 'Feb', current: 1200, last: 1100 },
+      { name: 'Mar', current: 1100, last: 1050 },
+      { name: 'Apr', current: 1300, last: 1200 },
+      { name: 'May', current: 8500, last: 8000 },
+      { name: 'Jun', current: 1400, last: 1300 },
+      { name: 'Jul', current: 1200, last: 1150 },
+      { name: 'Aug', current: 1100, last: 1000 },
+      { name: 'Sep', current: 9200, last: 8900 },
+      { name: 'Oct', current: 1500, last: 1400 },
+      { name: 'Nov', current: 1300, last: 1250 },
+      { name: 'Dec', current: 800, last: 750 },
+    ]
+  };
 
   // Handle print functionality
   const handlePrint = useReactToPrint({
@@ -130,6 +153,33 @@ const MoeReports = () => {
   }, [currentUser]);
 
   useEffect(() => {
+    const fetchEnrollmentStats = async () => {
+      if (!currentUser?.token) return;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/student-enrollment/student-total-by-inst`, {
+          headers: {
+            'Authorization': `Bearer ${currentUser.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const result = await response.json();
+        const data = Array.isArray(result) ? result : (result.data || []);
+        
+        const total = data.reduce((sum, item) => {
+          const count = typeof item === 'number' ? item : (item.count || item.totalStudents || item.total || item.enrollment || 0);
+          return sum + count;
+        }, 0);
+        
+        setTotalEnrollments(total);
+        setAverageEnrollment(data.length > 0 ? Math.round(total / data.length) : 0);
+      } catch (error) {
+        console.error('Error fetching enrollment stats:', error);
+      }
+    };
+    fetchEnrollmentStats();
+  }, [currentUser]);
+
+  useEffect(() => {
     const fetchProgramData = async () => {
       if (!selectedInstitution || !currentUser?.token) return;
       try {
@@ -193,6 +243,68 @@ const MoeReports = () => {
     XLSX.writeFile(wb, 'student_reports.xlsx');
   };
 
+  const renderReportModal = () => {
+    if (viewingReport !== 'enrollment-comparison') return null;
+
+    return (
+      <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <TrendingUp className="w-6 h-6 text-blue-600" /> Enrollment Comparison Report
+            </h2>
+            <button onClick={() => setViewingReport(null)} className="p-1 hover:bg-gray-100 rounded-full">
+              <X className="w-6 h-6 text-gray-500" />
+            </button>
+          </div>
+          <div className="p-6 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold mb-4">Yearly Growth</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={enrollmentTrends.yearlyComparison}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="year" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="students" fill="#3b82f6" name="Total Students" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold mb-4">Monthly Intake Trends (Current vs Last Year)</h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={enrollmentTrends.monthlyTrend}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="current" stroke="#3b82f6" name="Current Year" strokeWidth={2} />
+                      <Line type="monotone" dataKey="last" stroke="#9ca3af" name="Last Year" strokeDasharray="5 5" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <h3 className="font-semibold text-blue-800 mb-2">Analysis Summary</h3>
+              <p className="text-blue-700 text-sm">
+                Enrollment has shown a consistent upward trend over the last 3 years. 
+                Major intakes in May and September continue to drive the majority of new student registrations. 
+                Current year performance is tracking approximately 5-8% higher than the previous year across most months.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-6 space-y-8" ref={reportRef}>
       <div className="space-y-2">
@@ -227,7 +339,7 @@ const MoeReports = () => {
         <ReportCard 
           icon={<UserCheck className="w-6 h-6" />} 
           title="Average Enrollment per Institution" 
-          value={loading || totalInstitutions === 0 ? "..." : Math.round(totalEnrollments / totalInstitutions).toLocaleString()}
+          value={loading ? "..." : averageEnrollment.toLocaleString()}
           change="+3% YoY"
         />
       </div>
@@ -314,9 +426,16 @@ const MoeReports = () => {
             title="Employment Outcomes"
             description="Graduate employment and skills analysis"
           />
+          <ReportItem 
+            icon={<TrendingUp />}
+            title="Enrollment Comparison"
+            description="Compare enrollments: Last Year vs Current Year & Monthly Trends"
+            onClick={() => setViewingReport('enrollment-comparison')}
+          />
         </div>
       </div>
 
+      {renderReportModal()}
     </div>
   );
 };
@@ -467,8 +586,8 @@ const ReportCard = ({ icon, title, value, change }) => (
   </div>
 );
 
-const ReportItem = ({ icon, title, description }) => (
-  <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+const ReportItem = ({ icon, title, description, onClick }) => (
+  <div className={`p-4 border rounded-lg hover:bg-gray-50 transition-colors ${onClick ? 'cursor-pointer' : ''}`} onClick={onClick}>
     <div className="flex items-start gap-3">
       <div className="p-2 bg-blue-100 rounded-lg text-blue-600 mt-1">
         {React.cloneElement(icon, { className: 'w-4 h-4' })}

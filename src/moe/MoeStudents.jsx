@@ -4,161 +4,33 @@ import { Search, Filter, Users, ChevronDown, Download } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
 
-// Mock data for aggregate views
-const mockAggregateData = {
-  socioEconomic: {
-    total: 1500,
-    lowIncome: 700,
-    middleIncome: 600,
-    highIncome: 200,
-    byProgram: [
-      { program: "Computer Science", count: 300, lowIncome: 150, middleIncome: 100, highIncome: 50 },
-      { program: "Electrical Engineering", count: 250, lowIncome: 120, middleIncome: 100, highIncome: 30 },
-    ],
-    byInstitution: [
-      { institution: "Nairobi Technical Institute", count: 500, lowIncome: 250, middleIncome: 200, highIncome: 50 },
-      { institution: "Mombasa Technical Institute", count: 400, lowIncome: 200, middleIncome: 150, highIncome: 50 },
-    ],
-    byCounty: [
-      { county: "Nairobi", count: 700, lowIncome: 300, middleIncome: 300, highIncome: 100 },
-      { county: "Mombasa", count: 400, lowIncome: 200, middleIncome: 150, highIncome: 50 },
-    ]
-  },
-  ruralEnrollment: {
-    total: 450,
-    byProgram: [
-      { program: "Agriculture", count: 150 },
-      { program: "Veterinary", count: 100 },
-    ],
-    byInstitution: [
-      { institution: "Nairobi Technical Institute", count: 200 },
-      { institution: "Mombasa Technical Institute", count: 150 },
-    ],
-    byCounty: [
-      { county: "Nairobi", count: 200 },
-      { county: "Mombasa", count: 150 },
-    ]
-  },
-  rplUptake: {
-    total: 200,
-    byProgram: [
-      { program: "Masonry", count: 80 },
-      { program: "Carpentry", count: 70 },
-    ],
-    byInstitution: [
-      { institution: "Nairobi Technical Institute", count: 100 },
-      { institution: "Mombasa Technical Institute", count: 80 },
-    ],
-    byCounty: [
-      { county: "Nairobi", count: 120 },
-      { county: "Mombasa", count: 80 },
-    ]
-  },
-  nysEnrollment: {
-    total: 300,
-    byProgram: [
-      { program: "Security", count: 120 },
-      { program: "Hospitality", count: 90 },
-    ],
-    byInstitution: [
-      { institution: "Nairobi Technical Institute", count: 150 },
-      { institution: "Mombasa Technical Institute", count: 100 },
-    ]
-  }
-};
-
 const MoeStudents = () => {
   const { currentUser } = useAuth();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  // List of all 47 Kenyan counties
-  const allKenyanCounties = [
-    'Baringo', 'Bomet', 'Bungoma', 'Busia', 'Elgeyo-Marakwet',
-    'Embu', 'Garissa', 'Homa Bay', 'Isiolo', 'Kajiado',
-    'Kakamega', 'Kericho', 'Kiambu', 'Kilifi', 'Kirinyaga',
-    'Kisii', 'Kisumu', 'Kitui', 'Kwale', 'Laikipia',
-    'Lamu', 'Machakos', 'Makueni', 'Mandera', 'Marsabit',
-    'Meru', 'Migori', 'Mombasa', 'Murang\'a', 'Nairobi',
-    'Nakuru', 'Nandi', 'Narok', 'Nyamira', 'Nyandarua',
-    'Nyeri', 'Samburu', 'Siaya', 'Taita-Taveta', 'Tana River',
-    'Tharaka-Nithi', 'Trans Nzoia', 'Turkana', 'Uasin Gishu',
-    'Vihiga', 'Wajir', 'West Pokot'
-  ];
-
-  const [availableCounties, setAvailableCounties] = useState(allKenyanCounties);
   const [filters, setFilters] = useState({
-    program: 'all',
-    status: 'all',
-    gender: 'all',
-    county: 'all'
+    programCode: 'all',
+    studentCurrentStatus: 'all',
+    studentGender: 'all'
   });
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [showAnalysisDropdown, setShowAnalysisDropdown] = useState(false);
-  const [activeView, setActiveView] = useState('students'); // 'students' or aggregate view name
-  const [aggregateData, setAggregateData] = useState(null);
-  const [selectedCounty, setSelectedCounty] = useState('all');
-
-  // Generate mock student data based on county
-  const generateMockStudents = (county = null) => {
-    const firstNames = ['John', 'Jane', 'Michael', 'Emily', 'David', 'Sarah', 'James', 'Mary', 'Robert', 'Jennifer'];
-    const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Miller', 'Davis', 'Garcia', 'Rodriguez', 'Wilson'];
-    const programs = ['Computer Science', 'Business Administration', 'Engineering', 'Nursing', 'Education', 'Agriculture'];
-    const statuses = ['Active', 'Inactive', 'Graduated', 'Dropped Out'];
-    const genders = ['Male', 'Female'];
-    
-    // If no specific county is selected, return data for all counties
-    const targetCounties = county ? [county] : allKenyanCounties;
-    
-    const mockStudents = [];
-    
-    targetCounties.forEach(county => {
-      // Generate between 5-15 students per county
-      const numStudents = 5 + Math.floor(Math.random() * 11);
-      
-      for (let i = 0; i < numStudents; i++) {
-        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-        const program = programs[Math.floor(Math.random() * programs.length)];
-        const status = statuses[Math.floor(Math.random() * statuses.length)];
-        const gender = genders[Math.floor(Math.random() * genders.length)];
-        
-        mockStudents.push({
-          id: `STU-${1000 + mockStudents.length}`,
-          studentName: `${firstName} ${lastName}`,
-          studentAdmissionNumber: `ADM-${new Date().getFullYear()}-${1000 + mockStudents.length}`,
-          studentNumber: `STU-${1000 + mockStudents.length}`,
-          program,
-          studentCurrentStatus: status,
-          studentGender: gender,
-          county,
-          institutionName: `${county} Technical Training Institute`,
-          attendanceRate: (70 + Math.floor(Math.random() * 30)).toFixed(1) + '%',
-          lastActive: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        });
-      }
-    });
-    
-    return mockStudents;
-  };
 
   // Fetch students data
-  const fetchStudents = async (county = null) => {
+  const fetchStudents = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Generate mock data
-      const mockData = generateMockStudents(county);
-      setStudents(mockData);
-      
-      // Update available counties based on mock data
-      const uniqueCounties = [...new Set(mockData.map(s => s.county).filter(Boolean))];
-      setAvailableCounties(prev => [...new Set([...allKenyanCounties, ...prev, ...uniqueCounties])].sort());
+      const response = await fetch(`${API_BASE_URL}/api/v1/student-enrollment/student-dtl`, {
+        headers: { 'Authorization': `Bearer ${currentUser?.token}` },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const studentData = await response.json();
+      setStudents(Array.isArray(studentData) ? studentData : []);
       
     } catch (err) {
       setError(err.message || 'Failed to fetch students');
@@ -183,10 +55,9 @@ const MoeStudents = () => {
           (student.studentNumber || '').includes(searchTerm);
         
         const matchesFilters = 
-          (filters.program === 'all' || student.program === filters.program) &&
-          (filters.status === 'all' || student.studentCurrentStatus === filters.status) &&
-          (filters.gender === 'all' || student.studentGender === filters.gender) &&
-          (filters.county === 'all' || student.county === filters.county);
+          (filters.programCode === 'all' || student.programCode === filters.programCode) &&
+          (filters.studentCurrentStatus === 'all' || student.studentCurrentStatus === filters.studentCurrentStatus) &&
+          (filters.studentGender === 'all' || student.studentGender === filters.studentGender);
         
         return matchesSearch && matchesFilters;
       })
@@ -205,8 +76,7 @@ const MoeStudents = () => {
       if (!acc[key]) {
         acc[key] = { total: 0, count: 0 };
       }
-      // Assuming attendance is a number between 0-100, adjust field name as needed
-      const attendance = parseFloat(student.attendancePercentage) || 0;
+      const attendance = (student.studentAttendanceRate || 0) * 100;
       acc[key].total += attendance;
       acc[key].count += 1;
       return acc;
@@ -218,9 +88,7 @@ const MoeStudents = () => {
     })).sort((a, b) => b.average - a.average);
   };
 
-  const attendanceByCounty = calculateAverageAttendance('county');
-  const attendanceByInstitution = calculateAverageAttendance('institutionName');
-  const attendanceByProgram = calculateAverageAttendance('program');
+  const attendanceByProgram = calculateAverageAttendance('programCode');
 
   // Fetch data on component mount
   useEffect(() => {
@@ -239,55 +107,12 @@ const MoeStudents = () => {
   // Reset all filters
   const resetFilters = () => {
     setFilters({
-      program: 'all',
-      status: 'all',
-      gender: 'all',
-      county: 'all'
+      programCode: 'all',
+      studentCurrentStatus: 'all',
+      studentGender: 'all'
     });
-    setSelectedCounty('all');
     setSearchTerm('');
     fetchStudents(); // Reset to show all students
-  };
-
-  // Handle county change
-  const handleCountyChange = (e) => {
-    const county = e.target.value === 'all' ? null : e.target.value;
-    setSelectedCounty(e.target.value);
-    fetchStudents(county);
-  };
-
-  // Handle view selection for aggregates
-  const handleViewSelect = async (view) => {
-    setActiveView(view);
-    setShowAnalysisDropdown(false);
-    setAggregateData(null);
-
-    if (view === 'students') {
-      fetchStudents();
-      return;
-    }
-
-    // Simulate fetching aggregate data
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Map view to data source
-      if (view.startsWith('socioEconomic')) {
-        setAggregateData(mockAggregateData.socioEconomic);
-      } else if (view.startsWith('ruralEnrollment')) {
-        setAggregateData(mockAggregateData.ruralEnrollment);
-      } else if (view.startsWith('rplUptake')) {
-        setAggregateData(mockAggregateData.rplUptake);
-      } else if (view.startsWith('nysEnrollment')) {
-        setAggregateData(mockAggregateData.nysEnrollment);
-      }
-    } catch (err) {
-      console.error('Error fetching aggregate data:', err);
-      setError('Failed to load analysis data');
-    } finally {
-      setLoading(false);
-    }
   };
 
   if (loading) {
@@ -336,111 +161,7 @@ const MoeStudents = () => {
             />
           </div>
 
-          {/* Analysis Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowAnalysisDropdown(!showAnalysisDropdown)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <Filter className="w-4 h-4 text-gray-500" />
-              <span>Analysis</span>
-              <ChevronDown className="w-4 h-4 text-gray-500" />
-            </button>
-
-            {showAnalysisDropdown && (
-              <div className="absolute right-0 z-20 mt-2 w-72 bg-white rounded-md shadow-lg border border-gray-200 p-2 max-h-96 overflow-y-auto">
-                <div className="space-y-1">
-                  <button
-                    onClick={() => handleViewSelect('students')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'students' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    Student List
-                  </button>
-                  
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">Socio-Economic</div>
-                  <button
-                    onClick={() => handleViewSelect('socioEconomic')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'socioEconomic' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    Total Overview
-                  </button>
-                  <button
-                    onClick={() => handleViewSelect('socioEconomicByInstitution')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'socioEconomicByInstitution' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    By Institution
-                  </button>
-                  <button
-                    onClick={() => handleViewSelect('socioEconomicByCounty')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'socioEconomicByCounty' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    By County
-                  </button>
-
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">Rural Learners</div>
-                  <button
-                    onClick={() => handleViewSelect('ruralEnrollment')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'ruralEnrollment' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    Total Overview
-                  </button>
-                  <button
-                    onClick={() => handleViewSelect('ruralEnrollmentByInstitution')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'ruralEnrollmentByInstitution' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    By Institution
-                  </button>
-                  <button
-                    onClick={() => handleViewSelect('ruralEnrollmentByCounty')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'ruralEnrollmentByCounty' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    By County
-                  </button>
-
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">RPL Uptake</div>
-                  <button
-                    onClick={() => handleViewSelect('rplUptake')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'rplUptake' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    Total Overview
-                  </button>
-                  <button
-                    onClick={() => handleViewSelect('rplUptakeByInstitution')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'rplUptakeByInstitution' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    By Institution
-                  </button>
-                  <button
-                    onClick={() => handleViewSelect('rplUptakeByCounty')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'rplUptakeByCounty' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    By County
-                  </button>
-
-                  <div className="border-t border-gray-100 my-1"></div>
-                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">NYS Enrollment</div>
-                  <button
-                    onClick={() => handleViewSelect('nysEnrollment')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'nysEnrollment' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    Total Overview
-                  </button>
-                  <button
-                    onClick={() => handleViewSelect('nysEnrollmentByInstitution')}
-                    className={`w-full text-left px-4 py-2 text-sm rounded ${activeView === 'nysEnrollmentByInstitution' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    By Institution
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Filter Button */}
-          {activeView === 'students' && (
           <div className="relative">
             <button
               onClick={() => setShowFilterDropdown(!showFilterDropdown)}
@@ -457,14 +178,14 @@ const MoeStudents = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
                     <select
-                      name="program"
-                      value={filters.program}
+                      name="programCode"
+                      value={filters.programCode}
                       onChange={handleFilterChange}
                       className="w-full p-2 border rounded-md"
                     >
                       <option value="all">All Programs</option>
-                      {getUniqueValues('program').map(program => (
-                        <option key={program} value={program}>{program}</option>
+                      {getUniqueValues('programCode').map(programCode => (
+                        <option key={programCode} value={programCode}>{programCode}</option>
                       ))}
                     </select>
                   </div>
@@ -472,8 +193,8 @@ const MoeStudents = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select
-                      name="status"
-                      value={filters.status}
+                      name="studentCurrentStatus"
+                      value={filters.studentCurrentStatus}
                       onChange={handleFilterChange}
                       className="w-full p-2 border rounded-md"
                     >
@@ -488,8 +209,8 @@ const MoeStudents = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
                     <select
-                      name="gender"
-                      value={filters.gender}
+                      name="studentGender"
+                      value={filters.studentGender}
                       onChange={handleFilterChange}
                       className="w-full p-2 border rounded-md"
                     >
@@ -497,21 +218,6 @@ const MoeStudents = () => {
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                       <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">County</label>
-                    <select
-                      name="county"
-                      value={filters.county}
-                      onChange={handleFilterChange}
-                      className="w-full p-2 border rounded-md"
-                    >
-                      <option value="all">All Counties</option>
-                      {getUniqueValues('county').map(county => (
-                        <option key={county} value={county}>{county}</option>
-                      ))}
                     </select>
                   </div>
 
@@ -525,39 +231,11 @@ const MoeStudents = () => {
               </div>
             )}
           </div>
-          )}
 
           {/* Export Button */}
           <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
             <Download className="w-4 h-4" />
             <span>Export</span>
-          </button>
-        </div>
-      </div>
-
-      {activeView === 'students' ? (
-      <>
-      {/* County Filter */}
-      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by County</h3>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <select
-              value={selectedCounty}
-              onChange={handleCountyChange}
-              className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">All Counties</option>
-              {allKenyanCounties.map((county, index) => (
-                <option key={index} value={county}>{county}</option>
-              ))}
-            </select>
-          </div>
-          <button
-            onClick={resetFilters}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
-          >
-            Reset Filters
           </button>
         </div>
       </div>
@@ -626,44 +304,7 @@ const MoeStudents = () => {
       <div className="mb-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Average Attendance Metrics</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          {/* Attendance by County */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">By County</h3>
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
-              {attendanceByCounty.length > 0 ? (
-                attendanceByCounty.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700 truncate">{item.name}</span>
-                    <span className="text-sm font-semibold text-blue-600">{item.average}%</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No attendance data available</p>
-              )}
-            </div>
-          </div>
-
-          {/* Attendance by Institution */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">By Institution</h3>
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
-              {attendanceByInstitution.length > 0 ? (
-                attendanceByInstitution.slice(0, 10).map((item, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700 truncate">{item.name}</span>
-                    <span className="text-sm font-semibold text-blue-600">{item.average}%</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No attendance data available</p>
-              )}
-              {attendanceByInstitution.length > 10 && (
-                <p className="text-xs text-gray-500 mt-2">Showing top 10 of {attendanceByInstitution.length} institutions</p>
-              )}
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6">
           {/* Attendance by Program */}
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-medium text-gray-800 mb-4">By Program</h3>
@@ -701,12 +342,6 @@ const MoeStudents = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Program
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Institution
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  County
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -738,19 +373,13 @@ const MoeStudents = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{student.program || 'N/A'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{student.institutionName || 'N/A'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{student.county || 'N/A'}</div>
+                      <div className="text-sm text-gray-900">{student.programCode || 'N/A'}</div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">
                     No students found matching your criteria
                   </td>
                 </tr>
@@ -759,109 +388,6 @@ const MoeStudents = () => {
           </table>
         </div>
       </div>
-      </>
-      ) : (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">
-            {activeView.includes('socioEconomic') && 'Socio-Economic Analysis'}
-            {activeView.includes('ruralEnrollment') && 'Rural Enrollment Analysis'}
-            {activeView.includes('rplUptake') && 'RPL Uptake Analysis'}
-            {activeView.includes('nysEnrollment') && 'NYS Enrollment Analysis'}
-          </h2>
-
-          {aggregateData && (
-            <div className="space-y-8">
-              {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-blue-800">Total</h3>
-                  <p className="text-2xl font-bold text-blue-600">{aggregateData.total || 0}</p>
-                </div>
-                {aggregateData.lowIncome !== undefined && (
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <h3 className="text-sm font-medium text-green-800">Low Income</h3>
-                    <p className="text-2xl font-bold text-green-600">{aggregateData.lowIncome}</p>
-                  </div>
-                )}
-                {aggregateData.middleIncome !== undefined && (
-                  <div className="bg-yellow-50 p-4 rounded-lg">
-                    <h3 className="text-sm font-medium text-yellow-800">Middle Income</h3>
-                    <p className="text-2xl font-bold text-yellow-600">{aggregateData.middleIncome}</p>
-                  </div>
-                )}
-                {aggregateData.highIncome !== undefined && (
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="text-sm font-medium text-purple-800">High Income</h3>
-                    <p className="text-2xl font-bold text-purple-600">{aggregateData.highIncome}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Detailed Table */}
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        {activeView.includes('ByInstitution') ? 'Institution' : 
-                         activeView.includes('ByCounty') ? 'County' : 'Category'}
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                      {aggregateData.lowIncome !== undefined && (
-                        <>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Low Income</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Middle Income</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">High Income</th>
-                        </>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {(() => {
-                      let dataToRender = [];
-                      if (activeView.includes('ByInstitution')) dataToRender = aggregateData.byInstitution || [];
-                      else if (activeView.includes('ByCounty')) dataToRender = aggregateData.byCounty || [];
-                      else dataToRender = aggregateData.byProgram || []; // Default to program or general view
-
-                      return dataToRender.map((item, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {item.institution || item.county || item.program || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {item.count}
-                          </td>
-                          {item.lowIncome !== undefined && (
-                            <>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {item.lowIncome}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {item.middleIncome}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {item.highIncome}
-                              </td>
-                            </>
-                          )}
-                        </tr>
-                      ));
-                    })()}
-                    {(!aggregateData.byInstitution && activeView.includes('ByInstitution')) || 
-                     (!aggregateData.byCounty && activeView.includes('ByCounty')) ? (
-                      <tr>
-                        <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                          No breakdown data available for this view.
-                        </td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };
