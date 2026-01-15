@@ -24,7 +24,8 @@ const MoeStudents = () => {
     studentRPLStatus: 'all',
     institution: 'all',
     county: 'all',
-    completionStatus: 'all'
+    institutionType: 'all',
+    completionStatus: 'Active'
   });
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,6 +92,10 @@ const MoeStudents = () => {
     return [...new Set(institutions.map(inst => inst.institutionCounty).filter(Boolean))].sort();
   }, [institutions]);
 
+  const uniqueInstitutionTypes = useMemo(() => {
+    return [...new Set(institutions.map(inst => inst.institutionType).filter(Boolean))].sort();
+  }, [institutions]);
+
   // Create a map of institution registration numbers to names
   const institutionMap = useMemo(() => {
     return institutions.reduce((acc, inst) => {
@@ -118,6 +123,15 @@ const MoeStudents = () => {
     return searchTerm !== '' || Object.values(filters).some(value => value !== 'all');
   }, [searchTerm, filters]);
 
+  const getCalculatedStatus = (student) => {
+    if (!student.studentExpectedCompletionDate) return student.studentCurrentStatus || 'N/A';
+    const completionDate = new Date(student.studentExpectedCompletionDate);
+    const now = new Date();
+    completionDate.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    return completionDate >= now ? 'Active' : 'Inactive';
+  };
+
   // Apply filters and search
   const filteredStudents = useMemo(() => {
     return Array.isArray(students) 
@@ -142,6 +156,7 @@ const MoeStudents = () => {
           (filters.institution === 'all' || 
             (student.institutionName || institutionMap[student.institutionRegistrationNumber] || '').toLowerCase().includes(filters.institution.toLowerCase())) &&
           (filters.county === 'all' || (student.institutionCounty === filters.county) || (studentInstitution && studentInstitution.institutionCounty === filters.county)) &&
+          (filters.institutionType === 'all' || (studentInstitution && studentInstitution.institutionType === filters.institutionType)) &&
           (filters.completionStatus === 'all' || 
             (filters.completionStatus === 'Active' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) >= new Date()) ||
             (filters.completionStatus === 'Inactive' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) < new Date())
@@ -154,13 +169,15 @@ const MoeStudents = () => {
 
   // Calculate summary statistics
   const totalStudents = students.length;
-  const maleStudents = students.filter(s => s.studentGender?.toLowerCase() === 'male').length;
-  const femaleStudents = students.filter(s => s.studentGender?.toLowerCase() === 'female').length;
+  const activeStudentsList = useMemo(() => filteredStudents.filter(s => getCalculatedStatus(s) === 'Active'), [filteredStudents]);
+  const activeStudents = activeStudentsList.length;
+  const activeMaleStudents = activeStudentsList.filter(s => s.studentGender?.toLowerCase() === 'male').length;
+  const activeFemaleStudents = activeStudentsList.filter(s => s.studentGender?.toLowerCase() === 'female').length;
 
   // Calculate average attendance metrics
   const attendanceByProgram = useMemo(() => {
     const groupByKey = 'programCode';
-    const groups = students.reduce((acc, student) => {
+    const groups = activeStudentsList.reduce((acc, student) => {
       const key = student[groupByKey] || 'Unknown';
       if (!acc[key]) {
         acc[key] = { total: 0, count: 0 };
@@ -171,11 +188,15 @@ const MoeStudents = () => {
       return acc;
     }, {});
 
+    const totalActive = activeStudentsList.length;
+
     return Object.entries(groups).map(([key, { total, count }]) => ({
       name: programMap[key] || key,
-      average: count > 0 ? (total / count).toFixed(1) : 0
-    })).sort((a, b) => b.average - a.average);
-  }, [students, programMap]);
+      average: count > 0 ? (total / count).toFixed(1) : 0,
+      count,
+      share: totalActive > 0 ? ((count / totalActive) * 100).toFixed(1) : 0
+    })).sort((a, b) => b.count - a.count);
+  }, [activeStudentsList, programMap]);
 
   // Pagination for programs list
   const [programPage, setProgramPage] = useState(1);
@@ -237,7 +258,8 @@ const MoeStudents = () => {
       studentRPLStatus: 'all',
       institution: 'all',
       county: 'all',
-      completionStatus: 'all'
+      institutionType: 'all',
+      completionStatus: 'Active'
     });
     setSearchTerm('');
     setCurrentPage(1);
@@ -278,6 +300,24 @@ const MoeStudents = () => {
         </div>
         
         <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+          {/* Institution Type Filter */}
+          <div className="relative">
+            <select
+              name="institutionType"
+              value={filters.institutionType}
+              onChange={handleFilterChange}
+              className="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+            >
+              <option value="all">All Types</option>
+              {uniqueInstitutionTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+              <ChevronDown className="h-4 w-4" />
+            </div>
+          </div>
+
           {/* County Filter */}
           <div className="relative">
             <select
@@ -489,7 +529,7 @@ const MoeStudents = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
@@ -505,10 +545,25 @@ const MoeStudents = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Male </p>
-              <p className="mt-1 text-3xl font-semibold text-blue-600">{maleStudents.toLocaleString()}</p>
+              <p className="text-sm font-medium text-gray-500">Active Students</p>
+              <p className="mt-1 text-3xl font-semibold text-green-600">{activeStudents.toLocaleString()}</p>
               <p className="mt-1 text-sm text-gray-500">
-                {totalStudents > 0 ? ((maleStudents / totalStudents) * 100).toFixed(1) : 0}%
+                {totalStudents > 0 ? ((activeStudents / totalStudents) * 100).toFixed(1) : 0}% of Total
+              </p>
+            </div>
+            <div className="p-3 bg-green-100 rounded-full">
+              <Users className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Active Male</p>
+              <p className="mt-1 text-3xl font-semibold text-blue-600">{activeMaleStudents.toLocaleString()}</p>
+              <p className="mt-1 text-sm text-gray-500">
+                {activeStudents > 0 ? ((activeMaleStudents / activeStudents) * 100).toFixed(1) : 0}% of Active
               </p>
             </div>
             <div className="p-3 bg-blue-50 rounded-full">
@@ -520,10 +575,10 @@ const MoeStudents = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Female</p>
-              <p className="mt-1 text-3xl font-semibold text-pink-600">{femaleStudents.toLocaleString()}</p>
+              <p className="text-sm font-medium text-gray-500">Active Female</p>
+              <p className="mt-1 text-3xl font-semibold text-pink-600">{activeFemaleStudents.toLocaleString()}</p>
               <p className="mt-1 text-sm text-gray-500">
-                {totalStudents > 0 ? ((femaleStudents / totalStudents) * 100).toFixed(1) : 0}%
+                {activeStudents > 0 ? ((activeFemaleStudents / activeStudents) * 100).toFixed(1) : 0}% of Active
               </p>
             </div>
             <div className="p-3 bg-pink-50 rounded-full">
@@ -534,20 +589,22 @@ const MoeStudents = () => {
       </div>
 
       {/* Attendance Metrics Section */}
-      {!hasActiveFilters && (
       <div className="mb-8 transition-all duration-300 ease-in-out">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Average Attendance Metrics</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Overall Attendance by Program</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6">
           {/* Attendance by Program */}
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-medium text-gray-800 mb-4">By Program</h3>
-            <div className="space-y-3 min-h-[200px]">
+            <div className="space-y-3 max-h-60 overflow-y-auto">
               {attendanceByProgram.length > 0 ? (
                 currentPrograms.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center">
+                  <div key={index} className="flex justify-between items-center border-b border-gray-100 pb-2 last:border-0 last:pb-0">
                     <span className="text-sm font-medium text-gray-700 truncate">{item.name || 'N/A'}</span>
-                    <span className="text-sm font-semibold text-blue-600">{item.average}%</span>
+                    <div className="text-right">
+                      <span className="text-sm font-semibold text-blue-600">{item.share}%</span>
+                      <p className="text-xs text-gray-500">{item.count} Students</p>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -576,7 +633,6 @@ const MoeStudents = () => {
           </div>
         </div>
       </div>
-      )}
 
       {/* Students Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
