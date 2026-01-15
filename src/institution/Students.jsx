@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Search, Filter, ChevronDown, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -7,7 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360
 
 const initialFilters = {
   programCode: 'all',
-  studentCurrentStatus: 'all',
+  studentReportingStatus: 'all',
   studentGender: 'all',
   studentSocioEconomicStatus: 'all',
   studentDisabilityStatus: 'all',
@@ -15,6 +15,7 @@ const initialFilters = {
   studentNYSEnrollment: 'all',
   studentDualApprenticeship: 'all',
   studentRPLStatus: 'all',
+  completionStatus: 'all',
   ethnicGroupId: '',
   wardId: '',
   enrollmentDateStart: '',
@@ -35,11 +36,14 @@ const Students = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [students, setStudents] = useState([]);
+  const [programs, setPrograms] = useState([]);
   const [filters, setFilters] = useState(initialFilters);
   const [successMessage, setSuccessMessage] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [newStudentData, setNewStudentData] = useState({
     studentAdmissionNumber: "",
     studentNumber: "",
@@ -62,6 +66,7 @@ const Students = () => {
     programCode: "",
     wardId: 0
   });
+  const filterRef = useRef(null);
 
   // Mock data fetch functions
   const fetchStudents = async () => {
@@ -80,6 +85,20 @@ const Students = () => {
       setStudents([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPrograms = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/program/get`, {
+        headers: { 'Authorization': `Bearer ${currentUser?.token}` },
+      });
+      const result = await response.json();
+      if (result.status === 200 && Array.isArray(result.data)) {
+        setPrograms(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch programs', err);
     }
   };
 
@@ -159,8 +178,13 @@ const Students = () => {
     }));
   };
 
+  const handleStudentClick = (student) => {
+    setSelectedStudent(student);
+    setShowDetailModal(true);
+  };
+
   // Apply filters and search
-  const filteredStudents = Array.isArray(students) 
+  const filteredStudents = useMemo(() => Array.isArray(students) 
     ? students.filter(student => {
         const matchesSearch = 
           (student.studentName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -169,14 +193,18 @@ const Students = () => {
         
         const matchesFilters = 
           (filters.programCode === 'all' || student.programCode === filters.programCode) &&
-          (filters.studentCurrentStatus === 'all' || student.studentCurrentStatus === filters.studentCurrentStatus) &&
-          (filters.studentGender === 'all' || student.studentGender === filters.studentGender) &&
+          (filters.studentReportingStatus === 'all' || student.studentReportingStatus === filters.studentReportingStatus) &&
+          (filters.studentGender === 'all' || (student.studentGender?.toLowerCase() === filters.studentGender.toLowerCase())) &&
           (filters.studentSocioEconomicStatus === 'all' || student.studentSocioEconomicStatus === filters.studentSocioEconomicStatus) &&
           (filters.studentDisabilityStatus === 'all' || String(student.studentDisabilityStatus) === filters.studentDisabilityStatus) &&
           (filters.studentRuralLearner === 'all' || String(student.studentRuralLearner) === filters.studentRuralLearner) &&
           (filters.studentNYSEnrollment === 'all' || String(student.studentNYSEnrollment) === filters.studentNYSEnrollment) &&
           (filters.studentDualApprenticeship === 'all' || String(student.studentDualApprenticeship) === filters.studentDualApprenticeship) &&
           (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus) &&
+          (filters.completionStatus === 'all' || 
+            (filters.completionStatus === 'Active' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) >= new Date()) ||
+            (filters.completionStatus === 'Inactive' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) < new Date())
+          ) &&
           (filters.ethnicGroupId === '' || String(student.ethnicGroupId) === filters.ethnicGroupId) &&
           (filters.wardId === '' || String(student.wardId) === filters.wardId) &&
           (!filters.enrollmentDateStart || new Date(student.studentEnrollmentDate) >= new Date(filters.enrollmentDateStart)) &&
@@ -190,7 +218,7 @@ const Students = () => {
         
         return matchesSearch && matchesFilters;
       })
-    : [];
+    : [], [students, searchTerm, filters]);
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -207,9 +235,31 @@ const Students = () => {
     });
   };
 
+  const programMap = useMemo(() => {
+    return programs.reduce((acc, prog) => {
+      acc[prog.programCode] = prog.programName;
+      return acc;
+    }, {});
+  }, [programs]);
+
   // Fetch students on component mount
   useEffect(() => {
     fetchStudents();
+    fetchPrograms();
+  }, []);
+
+  // Handle click outside filter to close it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   return (
@@ -244,7 +294,7 @@ const Students = () => {
           </div>
 
           {/* Filter Dropdown */}
-          <div className="relative">
+          <div className="relative" ref={filterRef}>
             <button
               onClick={() => setShowFilterDropdown(!showFilterDropdown)}
               className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -329,13 +379,19 @@ const Students = () => {
                         </select>
                       </div>
                        <div>
-                        <label className="text-xs text-gray-600">Current Status</label>
-                        <select name="studentCurrentStatus" value={filters.studentCurrentStatus} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">
+                        <label className="text-xs text-gray-600">Enrollment Status</label>
+                        <select name="completionStatus" value={filters.completionStatus} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">
                           <option value="all">All</option>
                           <option value="Active">Active</option>
                           <option value="Inactive">Inactive</option>
-                          <option value="Graduated">Graduated</option>
-                          <option value="Dropped Out">Dropped Out</option>
+                        </select>
+                      </div>
+                       <div>
+                        <label className="text-xs text-gray-600">Reporting Status</label>
+                        <select name="studentReportingStatus" value={filters.studentReportingStatus} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">
+                          <option value="all">All</option>
+                          <option value="REPORTED">Reported</option>
+                          <option value="NOT_REPORTED">Not Reported</option>
                         </select>
                       </div>
                       <button onClick={() => setFilters(initialFilters)} className="w-full text-center text-sm text-blue-600 hover:underline">
@@ -384,7 +440,11 @@ const Students = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentStudents.map((student) => (
-                  <tr key={student.studentAdmissionNumber} className="hover:bg-gray-50">
+                  <tr 
+                    key={student.studentAdmissionNumber} 
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleStudentClick(student)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="ml-4">
@@ -397,7 +457,7 @@ const Students = () => {
                       {student.studentAdmissionNumber}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {student.programCode || student.program}
+                      {programMap[student.programCode] || student.programCode || student.program || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -577,6 +637,151 @@ const Students = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Student Details Modal */}
+      {showDetailModal && selectedStudent && (
+        <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b flex justify-between items-center">
+              <h3 className="text-xl font-semibold text-gray-800">Student Details</h3>
+              <button onClick={() => setShowDetailModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Personal Information */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Personal Information</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <p className="text-sm font-medium text-gray-500">Full Name</p>
+                      <p className="text-sm text-gray-900">{selectedStudent.studentName}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Gender</p>
+                      <p className="text-sm text-gray-900">{selectedStudent.studentGender}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Date of Birth</p>
+                      <p className="text-sm text-gray-900">{selectedStudent.studentDateOfBirth ? formatDate(selectedStudent.studentDateOfBirth) : 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Student Number</p>
+                      <p className="text-sm text-gray-900">{selectedStudent.studentNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Admission Number</p>
+                      <p className="text-sm text-gray-900">{selectedStudent.studentAdmissionNumber}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Academic Information */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Academic Information</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <p className="text-sm font-medium text-gray-500">Program</p>
+                      <p className="text-sm text-gray-900">{programMap[selectedStudent.programCode] || selectedStudent.programCode}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Enrollment Date</p>
+                      <p className="text-sm text-gray-900">{selectedStudent.studentEnrollmentDate ? formatDate(selectedStudent.studentEnrollmentDate) : 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Expected Completion</p>
+                      <p className="text-sm text-gray-900">{selectedStudent.studentExpectedCompletionDate ? formatDate(selectedStudent.studentExpectedCompletionDate) : 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Current Status</p>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        selectedStudent.studentCurrentStatus === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {selectedStudent.studentCurrentStatus}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Reporting Status</p>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        selectedStudent.studentReportingStatus === 'REPORTED' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {selectedStudent.studentReportingStatus}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Performance & Risk */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Performance & Risk</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Attendance Rate</p>
+                      <p className="text-sm text-gray-900">{(selectedStudent.studentAttendanceRate * 100).toFixed(1)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Dropout Risk</p>
+                      <p className={`text-sm font-bold ${selectedStudent.studentDropoutRisk > 0.5 ? 'text-red-600' : 'text-green-600'}`}>
+                        {(selectedStudent.studentDropoutRisk * 100).toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Background & Demographics */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Background & Demographics</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Socio-Economic Status</p>
+                      <p className="text-sm text-gray-900">{selectedStudent.studentSocioEconomicStatus}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Ward ID</p>
+                      <p className="text-sm text-gray-900">{selectedStudent.wardId}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Ethnic Group ID</p>
+                      <p className="text-sm text-gray-900">{selectedStudent.ethnicGroupId}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Special Indicators */}
+                <div className="col-span-1 md:col-span-2 space-y-4">
+                  <h4 className="text-lg font-medium text-gray-900 border-b pb-2">Special Indicators</h4>
+                  <div className="flex flex-wrap gap-4">
+                    <div className={`px-3 py-1 rounded-full text-sm ${selectedStudent.studentDisabilityStatus ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-500'}`}>
+                      Disability: {selectedStudent.studentDisabilityStatus ? 'Yes' : 'No'}
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-sm ${selectedStudent.studentRuralLearner ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-500'}`}>
+                      Rural Learner: {selectedStudent.studentRuralLearner ? 'Yes' : 'No'}
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-sm ${selectedStudent.studentNYSEnrollment ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-500'}`}>
+                      NYS Enrollment: {selectedStudent.studentNYSEnrollment ? 'Yes' : 'No'}
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-sm ${selectedStudent.studentDualApprenticeship ? 'bg-teal-100 text-teal-800' : 'bg-gray-100 text-gray-500'}`}>
+                      Dual Apprenticeship: {selectedStudent.studentDualApprenticeship ? 'Yes' : 'No'}
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-sm ${selectedStudent.studentRPLStatus ? 'bg-cyan-100 text-cyan-800' : 'bg-gray-100 text-gray-500'}`}>
+                      RPL Status: {selectedStudent.studentRPLStatus ? 'Yes' : 'No'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-gray-50 border-t text-right">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
