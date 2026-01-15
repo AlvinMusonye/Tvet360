@@ -556,7 +556,7 @@ const MoeInstitution = () => {
               </div>
 
               {/* Governance Score */}
-              <div>
+              {/* <div>
                 <label htmlFor="institutionGovernanceScore" className="block text-sm font-medium text-gray-700 mb-1">
                   Governance Score (0-100) *
                 </label>
@@ -574,10 +574,10 @@ const MoeInstitution = () => {
                 {formErrors.institutionGovernanceScore && (
                   <p className="mt-1 text-sm text-red-600">{formErrors.institutionGovernanceScore}</p>
                 )}
-              </div>
+              </div> */}
 
               {/* Corruption Risk Index */}
-              <div>
+              {/* <div>
                 <label htmlFor="institutionCorruptionRiskIndex" className="block text-sm font-medium text-gray-700 mb-1">
                   Corruption Risk Index (0.0-1.0)
                 </label>
@@ -592,10 +592,10 @@ const MoeInstitution = () => {
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 />
-              </div>
+              </div> */}
 
               {/* Stakeholder Satisfaction */}
-              <div>
+              {/* <div>
                 <label htmlFor="institutionStakeholderSatisfaction" className="block text-sm font-medium text-gray-700 mb-1">
                   Stakeholder Satisfaction (0-100) *
                 </label>
@@ -613,7 +613,7 @@ const MoeInstitution = () => {
                 {formErrors.institutionStakeholderSatisfaction && (
                   <p className="mt-1 text-sm text-red-600">{formErrors.institutionStakeholderSatisfaction}</p>
                 )}
-              </div>
+              </div> */}
             </div>
 
             <div className="flex justify-end space-x-3 pt-4">

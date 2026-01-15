@@ -20,7 +20,8 @@ const MoeStudents = () => {
     studentRuralLearner: 'all',
     studentNYSEnrollment: 'all',
     studentDualApprenticeship: 'all',
-    studentRPLStatus: 'all'
+    studentRPLStatus: 'all',
+    institution: 'all'
   });
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,6 +69,19 @@ const MoeStudents = () => {
     return [...new Set(students.map(item => item.programCode).filter(Boolean))];
   }, [students]);
 
+  // Create a map of institution registration numbers to names
+  const institutionMap = useMemo(() => {
+    return institutions.reduce((acc, inst) => {
+      acc[inst.institutionRegistrationNumber] = inst.institutionName;
+      return acc;
+    }, {});
+  }, [institutions]);
+
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return searchTerm !== '' || Object.values(filters).some(value => value !== 'all');
+  }, [searchTerm, filters]);
+
   // Apply filters and search
   const filteredStudents = useMemo(() => {
     return Array.isArray(students) 
@@ -86,12 +100,15 @@ const MoeStudents = () => {
           (filters.studentRuralLearner === 'all' || String(student.studentRuralLearner) === filters.studentRuralLearner) &&
           (filters.studentNYSEnrollment === 'all' || String(student.studentNYSEnrollment) === filters.studentNYSEnrollment) &&
           (filters.studentDualApprenticeship === 'all' || String(student.studentDualApprenticeship) === filters.studentDualApprenticeship) &&
-          (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus);
+          (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus) &&
+          (filters.institution === 'all' || 
+            (student.institutionName || institutionMap[student.institutionRegistrationNumber] || '').toLowerCase().includes(filters.institution.toLowerCase())
+          );
         
         return matchesSearch && matchesFilters;
       })
     : [];
-  }, [students, searchTerm, filters]);
+  }, [students, searchTerm, filters, institutionMap]);
 
   // Calculate summary statistics
   const totalStudents = students.length;
@@ -140,14 +157,6 @@ const MoeStudents = () => {
     fetchInstitutions();
   }, []);
 
-  // Create a map of institution registration numbers to names
-  const institutionMap = useMemo(() => {
-    return institutions.reduce((acc, inst) => {
-      acc[inst.institutionRegistrationNumber] = inst.institutionName;
-      return acc;
-    }, {});
-  }, [institutions]);
-
   // Handle filter change
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -169,7 +178,8 @@ const MoeStudents = () => {
       studentRuralLearner: 'all',
       studentNYSEnrollment: 'all',
       studentDualApprenticeship: 'all',
-      studentRPLStatus: 'all'
+      studentRPLStatus: 'all',
+      institution: 'all'
     });
     setSearchTerm('');
     setCurrentPage(1);
@@ -223,6 +233,23 @@ const MoeStudents = () => {
                 setCurrentPage(1);
               }}
             />
+          </div>
+
+          {/* Institution Filter */}
+          <div className="relative">
+            <input
+              list="institutions-list"
+              type="text"
+              name="institution"
+              placeholder="Filter by Institution..."
+              className="w-full pl-4 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => handleFilterChange({ target: { name: 'institution', value: e.target.value || 'all' } })}
+            />
+            <datalist id="institutions-list">
+              {institutions.map((inst) => (
+                <option key={inst.institutionRegistrationNumber} value={inst.institutionName} />
+              ))}
+            </datalist>
           </div>
 
           {/* Filter Button */}
@@ -406,6 +433,7 @@ const MoeStudents = () => {
               <p className="text-sm font-medium text-gray-500">Active Students</p>
               <p className="mt-1 text-3xl font-semibold text-green-600">{activeStudents.toLocaleString()}</p>
               <p className="mt-1 text-sm text-gray-500">
+                {totalStudents > 0 ? ((activeStudents / totalStudents) * 100).toFixed(1) : 0}%
               </p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">
@@ -420,6 +448,7 @@ const MoeStudents = () => {
               <p className="text-sm font-medium text-gray-500">Male Students</p>
               <p className="mt-1 text-3xl font-semibold text-blue-600">{maleStudents.toLocaleString()}</p>
               <p className="mt-1 text-sm text-gray-500">
+                {totalStudents > 0 ? ((maleStudents / totalStudents) * 100).toFixed(1) : 0}%
               </p>
             </div>
             <div className="p-3 bg-blue-50 rounded-full">
@@ -434,6 +463,7 @@ const MoeStudents = () => {
               <p className="text-sm font-medium text-gray-500">Female Students</p>
               <p className="mt-1 text-3xl font-semibold text-pink-600">{femaleStudents.toLocaleString()}</p>
               <p className="mt-1 text-sm text-gray-500">
+                {totalStudents > 0 ? ((femaleStudents / totalStudents) * 100).toFixed(1) : 0}%
               </p>
             </div>
             <div className="p-3 bg-pink-50 rounded-full">
@@ -444,7 +474,8 @@ const MoeStudents = () => {
       </div>
 
       {/* Attendance Metrics Section */}
-      <div className="mb-8">
+      {!hasActiveFilters && (
+      <div className="mb-8 transition-all duration-300 ease-in-out">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Average Attendance Metrics</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6">
@@ -485,6 +516,7 @@ const MoeStudents = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* Students Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
