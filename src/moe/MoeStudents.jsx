@@ -23,7 +23,8 @@ const MoeStudents = () => {
     studentDualApprenticeship: 'all',
     studentRPLStatus: 'all',
     institution: 'all',
-    county: 'all'
+    county: 'all',
+    completionStatus: 'all'
   });
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -140,7 +141,11 @@ const MoeStudents = () => {
           (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus) &&
           (filters.institution === 'all' || 
             (student.institutionName || institutionMap[student.institutionRegistrationNumber] || '').toLowerCase().includes(filters.institution.toLowerCase())) &&
-          (filters.county === 'all' || (student.institutionCounty === filters.county) || (studentInstitution && studentInstitution.institutionCounty === filters.county));
+          (filters.county === 'all' || (student.institutionCounty === filters.county) || (studentInstitution && studentInstitution.institutionCounty === filters.county)) &&
+          (filters.completionStatus === 'all' || 
+            (filters.completionStatus === 'Active' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) >= new Date()) ||
+            (filters.completionStatus === 'Inactive' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) < new Date())
+          );
         
         return matchesSearch && matchesFilters;
       })
@@ -149,7 +154,6 @@ const MoeStudents = () => {
 
   // Calculate summary statistics
   const totalStudents = students.length;
-  const activeStudents = students.length;
   const maleStudents = students.filter(s => s.studentGender?.toLowerCase() === 'male').length;
   const femaleStudents = students.filter(s => s.studentGender?.toLowerCase() === 'female').length;
 
@@ -232,7 +236,8 @@ const MoeStudents = () => {
       studentDualApprenticeship: 'all',
       studentRPLStatus: 'all',
       institution: 'all',
-      county: 'all'
+      county: 'all',
+      completionStatus: 'all'
     });
     setSearchTerm('');
     setCurrentPage(1);
@@ -336,6 +341,20 @@ const MoeStudents = () => {
                           {programMap[programCode] || programCode}
                         </option>
                       ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Active Status</label>
+                    <select
+                      name="completionStatus"
+                      value={filters.completionStatus}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
                     </select>
                   </div>
 
@@ -470,7 +489,7 @@ const MoeStudents = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
@@ -479,21 +498,6 @@ const MoeStudents = () => {
             </div>
             <div className="p-3 bg-blue-100 rounded-full">
               <Users className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500">Active </p>
-              <p className="mt-1 text-3xl font-semibold text-green-600">{activeStudents.toLocaleString()}</p>
-              <p className="mt-1 text-sm text-gray-500">
-                {totalStudents > 0 ? ((activeStudents / totalStudents) * 100).toFixed(1) : 0}%
-              </p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-full">
-              <Users className="h-6 w-6 text-green-600" />
             </div>
           </div>
         </div>
@@ -631,7 +635,9 @@ const MoeStudents = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{student.programCode || 'N/A'}</div>
+                      <div className="text-sm text-gray-900">
+                        {programMap[student.programCode] || student.programCode || 'N/A'}
+                      </div>
                     </td>
                   </tr>
                 ))
