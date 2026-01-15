@@ -14,7 +14,7 @@ const MoeStudents = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     programCode: 'all',
-    studentCurrentStatus: 'all',
+    studentReportingStatus: 'all',
     studentGender: 'all',
     studentSocioEconomicStatus: 'all',
     studentDisabilityStatus: 'all',
@@ -130,8 +130,8 @@ const MoeStudents = () => {
 
         const matchesFilters = 
           (filters.programCode === 'all' || student.programCode === filters.programCode) &&
-          (filters.studentCurrentStatus === 'all' || student.studentCurrentStatus === filters.studentCurrentStatus) &&
-          (filters.studentGender === 'all' || student.studentGender === filters.studentGender) &&
+          (filters.studentReportingStatus === 'all' || student.studentReportingStatus === filters.studentReportingStatus) &&
+          (filters.studentGender === 'all' || (student.studentGender?.toLowerCase() === filters.studentGender.toLowerCase())) &&
           (filters.studentSocioEconomicStatus === 'all' || student.studentSocioEconomicStatus === filters.studentSocioEconomicStatus) &&
           (filters.studentDisabilityStatus === 'all' || String(student.studentDisabilityStatus) === filters.studentDisabilityStatus) &&
           (filters.studentRuralLearner === 'all' || String(student.studentRuralLearner) === filters.studentRuralLearner) &&
@@ -140,7 +140,7 @@ const MoeStudents = () => {
           (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus) &&
           (filters.institution === 'all' || 
             (student.institutionName || institutionMap[student.institutionRegistrationNumber] || '').toLowerCase().includes(filters.institution.toLowerCase())) &&
-          (filters.county === 'all' || (studentInstitution && studentInstitution.institutionCounty === filters.county));
+          (filters.county === 'all' || (student.institutionCounty === filters.county) || (studentInstitution && studentInstitution.institutionCounty === filters.county));
         
         return matchesSearch && matchesFilters;
       })
@@ -223,7 +223,7 @@ const MoeStudents = () => {
   const resetFilters = () => {
     setFilters({
       programCode: 'all',
-      studentCurrentStatus: 'all',
+      studentReportingStatus: 'all',
       studentGender: 'all',
       studentSocioEconomicStatus: 'all',
       studentDisabilityStatus: 'all',
@@ -332,7 +332,9 @@ const MoeStudents = () => {
                     >
                       <option value="all">All Programs</option>
                       {uniquePrograms.map(programCode => (
-                        <option key={programCode} value={programCode}>{programCode}</option>
+                        <option key={programCode} value={programCode}>
+                          {programMap[programCode] || programCode}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -340,16 +342,14 @@ const MoeStudents = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select
-                      name="studentCurrentStatus"
-                      value={filters.studentCurrentStatus}
+                      name="studentReportingStatus"
+                      value={filters.studentReportingStatus}
                       onChange={handleFilterChange}
                       className="w-full p-2 border rounded-md"
                     >
                       <option value="all">All Statuses</option>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                      <option value="Graduated">Graduated</option>
-                      <option value="Dropped Out">Dropped Out</option>
+                      <option value="REPORTED">Reported</option>
+                      <option value="NOT_REPORTED">Not Reported</option>
                     </select>
                   </div>
 
@@ -474,7 +474,7 @@ const MoeStudents = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Students</p>
+              <p className="text-sm font-medium text-gray-500">Total </p>
               <p className="mt-1 text-3xl font-semibold text-gray-900">{totalStudents.toLocaleString()}</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-full">
@@ -486,7 +486,7 @@ const MoeStudents = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Active Students</p>
+              <p className="text-sm font-medium text-gray-500">Active </p>
               <p className="mt-1 text-3xl font-semibold text-green-600">{activeStudents.toLocaleString()}</p>
               <p className="mt-1 text-sm text-gray-500">
                 {totalStudents > 0 ? ((activeStudents / totalStudents) * 100).toFixed(1) : 0}%
@@ -614,7 +614,7 @@ const MoeStudents = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        THIKA TECHNICAL TRAINING INSTITUTE
+                        {student.institutionName || 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
