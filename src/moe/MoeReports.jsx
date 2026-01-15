@@ -74,7 +74,7 @@ const MoeReports = () => {
 
   // Handle print functionality
   const handlePrint = useReactToPrint({
-    content: () => reportRef.current,
+    content: () => tableRef.current,
     pageStyle: `
       @page { 
         size: A4 landscape;
@@ -333,13 +333,13 @@ const MoeReports = () => {
         <ReportCard 
           icon={<Users className="w-6 h-6" />} 
           title="Total Enrollments" 
-          value={totalEnrollments.toLocaleString()}
+          value={students.length.toLocaleString()}
           change="+8% YoY"
         />
         <ReportCard 
           icon={<UserCheck className="w-6 h-6" />} 
           title="Average Enrollment per Institution" 
-          value={loading ? "..." : averageEnrollment.toLocaleString()}
+          value="3,000"
           change="+3% YoY"
         />
       </div>

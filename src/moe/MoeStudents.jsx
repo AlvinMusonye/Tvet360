@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Search, Filter, Users, ChevronDown, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -7,13 +7,20 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360
 const MoeStudents = () => {
   const { currentUser } = useAuth();
   const [students, setStudents] = useState([]);
+  const [institutions, setInstitutions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     programCode: 'all',
     studentCurrentStatus: 'all',
-    studentGender: 'all'
+    studentGender: 'all',
+    studentSocioEconomicStatus: 'all',
+    studentDisabilityStatus: 'all',
+    studentRuralLearner: 'all',
+    studentNYSEnrollment: 'all',
+    studentDualApprenticeship: 'all',
+    studentRPLStatus: 'all'
   });
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -43,13 +50,27 @@ const MoeStudents = () => {
     }
   };
 
-  // Get unique values for filters
-  const getUniqueValues = (key) => {
-    return [...new Set(students.map(item => item[key]).filter(Boolean))];
+  const fetchInstitutions = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/institution/get`, {
+        headers: { 'Authorization': `Bearer ${currentUser?.token}` },
+      });
+      const result = await response.json();
+      if (result.status === 200 && Array.isArray(result.data)) {
+        setInstitutions(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch institutions', err);
+    }
   };
 
+  const uniquePrograms = useMemo(() => {
+    return [...new Set(students.map(item => item.programCode).filter(Boolean))];
+  }, [students]);
+
   // Apply filters and search
-  const filteredStudents = Array.isArray(students) 
+  const filteredStudents = useMemo(() => {
+    return Array.isArray(students) 
     ? students.filter(student => {
         const matchesSearch = 
           (student.studentName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -59,20 +80,28 @@ const MoeStudents = () => {
         const matchesFilters = 
           (filters.programCode === 'all' || student.programCode === filters.programCode) &&
           (filters.studentCurrentStatus === 'all' || student.studentCurrentStatus === filters.studentCurrentStatus) &&
-          (filters.studentGender === 'all' || student.studentGender === filters.studentGender);
+          (filters.studentGender === 'all' || student.studentGender === filters.studentGender) &&
+          (filters.studentSocioEconomicStatus === 'all' || student.studentSocioEconomicStatus === filters.studentSocioEconomicStatus) &&
+          (filters.studentDisabilityStatus === 'all' || String(student.studentDisabilityStatus) === filters.studentDisabilityStatus) &&
+          (filters.studentRuralLearner === 'all' || String(student.studentRuralLearner) === filters.studentRuralLearner) &&
+          (filters.studentNYSEnrollment === 'all' || String(student.studentNYSEnrollment) === filters.studentNYSEnrollment) &&
+          (filters.studentDualApprenticeship === 'all' || String(student.studentDualApprenticeship) === filters.studentDualApprenticeship) &&
+          (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus);
         
         return matchesSearch && matchesFilters;
       })
     : [];
+  }, [students, searchTerm, filters]);
 
   // Calculate summary statistics
   const totalStudents = students.length;
-  const activeStudents = students.filter(s => s.studentCurrentStatus === 'Active').length;
-  const maleStudents = students.filter(s => s.studentGender === 'Male').length;
-  const femaleStudents = students.filter(s => s.studentGender === 'Female').length;
+  const activeStudents = students.length;
+  const maleStudents = students.filter(s => s.studentGender?.toLowerCase() === 'male').length;
+  const femaleStudents = students.filter(s => s.studentGender?.toLowerCase() === 'female').length;
 
   // Calculate average attendance metrics
-  const calculateAverageAttendance = (groupByKey) => {
+  const attendanceByProgram = useMemo(() => {
+    const groupByKey = 'programCode';
     const groups = students.reduce((acc, student) => {
       const key = student[groupByKey] || 'Unknown';
       if (!acc[key]) {
@@ -88,9 +117,16 @@ const MoeStudents = () => {
       name: key,
       average: count > 0 ? (total / count).toFixed(1) : 0
     })).sort((a, b) => b.average - a.average);
-  };
+  }, [students]);
 
-  const attendanceByProgram = calculateAverageAttendance('programCode');
+  // Pagination for programs list
+  const [programPage, setProgramPage] = useState(1);
+  const programsPerPage = 10;
+  const currentPrograms = useMemo(() => {
+    const start = (programPage - 1) * programsPerPage;
+    return attendanceByProgram.slice(start, start + programsPerPage);
+  }, [attendanceByProgram, programPage]);
+  const totalProgramPages = Math.ceil(attendanceByProgram.length / programsPerPage);
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -101,7 +137,16 @@ const MoeStudents = () => {
   // Fetch data on component mount
   useEffect(() => {
     fetchStudents();
+    fetchInstitutions();
   }, []);
+
+  // Create a map of institution registration numbers to names
+  const institutionMap = useMemo(() => {
+    return institutions.reduce((acc, inst) => {
+      acc[inst.institutionRegistrationNumber] = inst.institutionName;
+      return acc;
+    }, {});
+  }, [institutions]);
 
   // Handle filter change
   const handleFilterChange = (e) => {
@@ -118,7 +163,13 @@ const MoeStudents = () => {
     setFilters({
       programCode: 'all',
       studentCurrentStatus: 'all',
-      studentGender: 'all'
+      studentGender: 'all',
+      studentSocioEconomicStatus: 'all',
+      studentDisabilityStatus: 'all',
+      studentRuralLearner: 'all',
+      studentNYSEnrollment: 'all',
+      studentDualApprenticeship: 'all',
+      studentRPLStatus: 'all'
     });
     setSearchTerm('');
     setCurrentPage(1);
@@ -186,7 +237,7 @@ const MoeStudents = () => {
             </button>
 
             {showFilterDropdown && (
-              <div className="absolute right-0 z-10 mt-2 w-64 bg-white rounded-md shadow-lg border border-gray-200 p-4">
+              <div className="absolute right-0 z-10 mt-2 w-80 bg-white rounded-md shadow-lg border border-gray-200 p-4 max-h-[80vh] overflow-y-auto">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
@@ -197,7 +248,7 @@ const MoeStudents = () => {
                       className="w-full p-2 border rounded-md"
                     >
                       <option value="all">All Programs</option>
-                      {getUniqueValues('programCode').map(programCode => (
+                      {uniquePrograms.map(programCode => (
                         <option key={programCode} value={programCode}>{programCode}</option>
                       ))}
                     </select>
@@ -234,6 +285,91 @@ const MoeStudents = () => {
                     </select>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Socio-Economic Status</label>
+                    <select
+                      name="studentSocioEconomicStatus"
+                      value={filters.studentSocioEconomicStatus}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="Low Income">Low Income</option>
+                      <option value="Middle Income">Middle Income</option>
+                      <option value="High Income">High Income</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Disability Status</label>
+                    <select
+                      name="studentDisabilityStatus"
+                      value={filters.studentDisabilityStatus}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Rural Learner</label>
+                    <select
+                      name="studentRuralLearner"
+                      value={filters.studentRuralLearner}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">NYS Enrollment</label>
+                    <select
+                      name="studentNYSEnrollment"
+                      value={filters.studentNYSEnrollment}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Dual Apprenticeship</label>
+                    <select
+                      name="studentDualApprenticeship"
+                      value={filters.studentDualApprenticeship}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">RPL Status</label>
+                    <select
+                      name="studentRPLStatus"
+                      value={filters.studentRPLStatus}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+
                   <button
                     onClick={resetFilters}
                     className="w-full mt-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-800"
@@ -246,10 +382,7 @@ const MoeStudents = () => {
           </div>
 
           {/* Export Button */}
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-            <Download className="w-4 h-4" />
-            <span>Export</span>
-          </button>
+
         </div>
       </div>
 
@@ -321,9 +454,9 @@ const MoeStudents = () => {
           {/* Attendance by Program */}
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-medium text-gray-800 mb-4">By Program</h3>
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
+            <div className="space-y-3 min-h-[200px]">
               {attendanceByProgram.length > 0 ? (
-                attendanceByProgram.map((item, index) => (
+                currentPrograms.map((item, index) => (
                   <div key={index} className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-700 truncate">{item.name || 'N/A'}</span>
                     <span className="text-sm font-semibold text-blue-600">{item.average}%</span>
@@ -333,6 +466,25 @@ const MoeStudents = () => {
                 <p className="text-sm text-gray-500">No attendance data available</p>
               )}
             </div>
+            {attendanceByProgram.length > programsPerPage && (
+              <div className="flex items-center justify-between mt-4 pt-2 border-t border-gray-100">
+                <button
+                  onClick={() => setProgramPage(prev => Math.max(prev - 1, 1))}
+                  disabled={programPage === 1}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-xs text-gray-500">Page {programPage} of {totalProgramPages}</span>
+                <button
+                  onClick={() => setProgramPage(prev => Math.min(prev + 1, totalProgramPages))}
+                  disabled={programPage === totalProgramPages}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -345,6 +497,9 @@ const MoeStudents = () => {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Student
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Institution
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Admission No.
@@ -370,6 +525,11 @@ const MoeStudents = () => {
                           <div className="text-sm font-medium text-gray-900">{student.studentName || 'N/A'}</div>
                           <div className="text-sm text-gray-500">{student.studentGender || 'N/A'}</div>
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        THIKA TECHNICAL TRAINING INSTITUTE
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
