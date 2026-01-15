@@ -310,7 +310,7 @@ const MoeReports = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <FileText className="w-6 h-6" /> MOE Reports Dashboard
+              <FileText className="w-6 h-6" /> TVETA360 Reports Dashboard
             </h1>
             <p className="text-gray-600">
               National oversight, policy formulation, and strategic decision-making
