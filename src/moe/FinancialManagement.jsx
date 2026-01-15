@@ -3,7 +3,7 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
   CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line 
 } from 'recharts';
-import { DollarSign, TrendingUp, BarChart2, PieChart as PieIcon, X, Calendar } from 'lucide-react';
+import { DollarSign, TrendingUp, BarChart2, PieChart as PieIcon, X, Calendar, Eye, Download } from 'lucide-react';
 
 // Mock data for MOE level - replace with actual API calls
 const overviewStats = {
@@ -49,11 +49,55 @@ const recentDisbursements = [
     { id: 3, recipient: 'Rift Valley Region', amount: 'Ksh 950M', date: '2023-10-05', type: 'Capitation' },
 ];
 
+const financialAudits = [
+  {
+    id: 1,
+    programCode: 'ICT/2023/001',
+    auditDate: '2023-06-15',
+    inspectionScore: 88,
+    feedback: 'Minor discrepancies in procurement records',
+    riskFlag: false,
+    financialYear: '2022/2023',
+    auditOpinion: 'Unqualified',
+    remarks: 'All financial statements are in order.',
+    queriesResolved: 92.5,
+    documents: ['Financial_Statement.pdf', 'Procurement_Records.pdf']
+  },
+  {
+    id: 2,
+    programCode: 'ENG/2023/005',
+    auditDate: '2023-07-20',
+    inspectionScore: 75,
+    feedback: 'Significant issues in asset verification.',
+    riskFlag: true,
+    financialYear: '2022/2023',
+    auditOpinion: 'Qualified',
+    remarks: 'Asset register does not match physical assets. Recommend immediate reconciliation.',
+    queriesResolved: 60,
+    documents: ['Asset_Verification.pdf']
+  },
+  {
+    id: 3,
+    programCode: 'HOS/2023/002',
+    auditDate: '2023-08-01',
+    inspectionScore: 45,
+    feedback: 'Major gaps in financial reporting and internal controls.',
+    riskFlag: true,
+    financialYear: '2022/2023',
+    auditOpinion: 'Adverse',
+    remarks: 'Financial statements do not present a true and fair view. Widespread material misstatements found.',
+    queriesResolved: 25,
+    documents: ['Internal_Control_Review.pdf']
+  }
+];
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const FinancialManagement = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [showDisburseModal, setShowDisburseModal] = useState(false);
+  const [showRemarksModal, setShowRemarksModal] = useState(false);
+  const [selectedAudit, setSelectedAudit] = useState(null);
   const [disbursementData, setDisbursementData] = useState({
     amount: '',
     recipient: '',
@@ -66,6 +110,11 @@ const FinancialManagement = () => {
     console.log('Disbursing funds:', disbursementData);
     setShowDisburseModal(false);
     setDisbursementData({ amount: '', recipient: '', votehead: '' });
+  };
+
+  const handleViewRemarks = (audit) => {
+    setSelectedAudit(audit);
+    setShowRemarksModal(true);
   };
 
   const renderOverview = () => (
@@ -221,6 +270,60 @@ const FinancialManagement = () => {
     </div>
   );
 
+  const renderAuditReports = () => (
+    <div className="bg-white p-6 rounded-lg shadow mb-8">
+      <h3 className="text-lg font-semibold mb-4">OAG Audit Reports</h3>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program Code</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Audit Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FY</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opinion</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risk</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {financialAudits.map((audit) => (
+              <tr key={audit.id}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{audit.programCode}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{audit.auditDate}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      audit.inspectionScore >= 80 ? 'bg-green-100 text-green-800' : 
+                      audit.inspectionScore >= 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {audit.inspectionScore}%
+                    </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{audit.financialYear}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{audit.auditOpinion}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {audit.riskFlag ? (
+                        <span className="text-red-600 font-medium">High</span>
+                    ) : (
+                        <span className="text-green-600 font-medium">Low</span>
+                    )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <button onClick={() => handleViewRemarks(audit)} className="text-blue-600 hover:text-blue-900 mr-3">
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button className="text-gray-600 hover:text-gray-900">
+                    <Download className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-2">MOE Financial Management</h2>
@@ -259,6 +362,16 @@ const FinancialManagement = () => {
           >
             Expenditure Analysis
           </button>
+          <button
+            onClick={() => setActiveTab('audit')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'audit'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            OAG Audit Reports
+          </button>
         </nav>
       </div>
 
@@ -267,6 +380,7 @@ const FinancialManagement = () => {
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'funding' && renderFunding()}
         {activeTab === 'expenditure' && renderExpenditure()}
+        {activeTab === 'audit' && renderAuditReports()}
       </div>
 
       {/* Disburse Funds Modal */}
@@ -336,6 +450,42 @@ const FinancialManagement = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Remarks Modal */}
+      {showRemarksModal && selectedAudit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">Audit Remarks: {selectedAudit.programCode}</h3>
+              <button onClick={() => setShowRemarksModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Opinion</p>
+                <p className="text-gray-900">{selectedAudit.auditOpinion}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Feedback</p>
+                <p className="text-gray-900">{selectedAudit.feedback}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">Remarks</p>
+                <p className="p-3 bg-gray-50 rounded border text-gray-700">{selectedAudit.remarks}</p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowRemarksModal(false)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

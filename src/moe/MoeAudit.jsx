@@ -11,77 +11,19 @@ import {
 } from '@mui/icons-material';
 
 const MoeAudit = () => {
-  const [auditType, setAuditType] = useState('financial');
+  const [auditType, setAuditType] = useState('performance');
   const [searchTerm, setSearchTerm] = useState('');
   const [isNewAuditOpen, setIsNewAuditOpen] = useState(false);
-  const [viewingAudit, setViewingAudit] = useState(null); // For viewing remarks
-
-  // Mock data - replace with API calls
-  const financialAudits = [
-    {
-      id: 1,
-      programCode: 'ICT/2023/001',
-      auditDate: '2023-06-15',
-      inspectionScore: 88,
-      feedback: 'Minor discrepancies in procurement records',
-      riskFlag: false,
-      financialYear: '2022/2023',
-      auditOpinion: 'Unqualified',
-      remarks: 'All financial statements are in order.',
-      queriesResolved: 92.5,
-      documents: ['Financial_Statement.pdf', 'Procurement_Records.pdf']
-    },
-    {
-      id: 2,
-      programCode: 'ENG/2023/005',
-      auditDate: '2023-07-20',
-      inspectionScore: 75,
-      feedback: 'Significant issues in asset verification.',
-      riskFlag: true,
-      financialYear: '2022/2023',
-      auditOpinion: 'Qualified',
-      remarks: 'Asset register does not match physical assets. Recommend immediate reconciliation.',
-      queriesResolved: 60,
-      documents: ['Asset_Verification.pdf']
-    },
-    {
-      id: 3,
-      programCode: 'HOS/2023/002',
-      auditDate: '2023-08-01',
-      inspectionScore: 45,
-      feedback: 'Major gaps in financial reporting and internal controls.',
-      riskFlag: true,
-      financialYear: '2022/2023',
-      auditOpinion: 'Adverse',
-      remarks: 'Financial statements do not present a true and fair view. Widespread material misstatements found.',
-      queriesResolved: 25,
-      documents: ['Internal_Control_Review.pdf']
-    },
-    {
-      id: 4,
-      programCode: 'BUS/2023/009',
-      auditDate: '2023-08-10',
-      inspectionScore: 55,
-      feedback: 'Unable to obtain sufficient appropriate audit evidence.',
-      riskFlag: true,
-      financialYear: '2022/2023',
-      auditOpinion: 'Disclaimer',
-      remarks: 'Scope limitation due to missing records for major transactions. Cannot form an opinion.',
-      queriesResolved: 40,
-      documents: []
-    },
-  ];
 
   const performanceAudits = [
     { id: 1, programCode: 'ICT/2023/001', auditDate: '2023-09-01', efficiencyScore: 82, effectiveness: 'High', recommendations: 'Streamline student onboarding process.' },
   ];
 
   const complianceAudits = [
-    { id: 1, programCode: 'N/A', auditDate: '2023-09-05', regulation: 'Safety and Health Act', status: 'Compliant', notes: 'All safety measures are in place.' },
+    { id: 1, programCode: 'ICT/2024/001', auditDate: '2023-09-05', regulation: 'Safety and Health Act', status: 'Compliant', notes: 'All safety measures are in place.' },
   ];
 
   const [audits, setAudits] = useState({
-    financial: financialAudits,
     performance: performanceAudits,
     compliance: complianceAudits,
   });
@@ -115,9 +57,6 @@ const MoeAudit = () => {
 
   const handleCloseNewAudit = () => setIsNewAuditOpen(false);
 
-  const handleViewRemarks = (audit) => setViewingAudit(audit);
-  const handleCloseRemarks = () => setViewingAudit(null);
-
   const handleNewAuditChange = (e) => {
     const { name, value } = e.target;
     setNewAudit(prev => ({ ...prev, [name]: value }));
@@ -135,7 +74,6 @@ const MoeAudit = () => {
                 onChange={(e) => setAuditType(e.target.value)}
                 label="Audit Type"
               >
-                <MenuItem value="financial">OAG Report Audit</MenuItem>
                 <MenuItem value="performance">Performance Audit</MenuItem>
                 <MenuItem value="compliance">Compliance Audit</MenuItem>
               </Select>
@@ -155,89 +93,6 @@ const MoeAudit = () => {
           </div>
         </div>
 
-        {auditType === 'financial' && (
-          <Table>
-          <TableHead>
-            <TableRow className="bg-gray-100">
-              <TableCell>Program Code</TableCell>
-              <TableCell>Audit Date</TableCell>
-              <TableCell>Score</TableCell>
-              <TableCell>Financial Year</TableCell>
-              <TableCell>Audit Opinion</TableCell>
-              <TableCell>Queries Resolved</TableCell>
-              <TableCell>Risk</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {audits.financial.filter(audit => 
-              audit.programCode.toLowerCase().includes(searchTerm.toLowerCase())
-            ).map((audit) => (
-              <TableRow key={audit.id} hover>
-                <TableCell>{audit.programCode}</TableCell>
-                <TableCell>{audit.auditDate}</TableCell>
-                <TableCell>
-                  <div className="flex items-center">
-                    <div 
-                      className={`w-8 h-2 rounded-full mr-2 ${
-                        audit.inspectionScore >= 80 ? 'bg-green-500' : 
-                        audit.inspectionScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}
-                    />
-                    {audit.inspectionScore}%
-                  </div>
-                </TableCell>
-                <TableCell>{audit.financialYear}</TableCell>
-                <TableCell>
-                  {(() => {
-                    switch (audit.auditOpinion) {
-                      case 'Unqualified':
-                        return <Chip label={audit.auditOpinion} color="success" size="small" />;
-                      case 'Qualified':
-                        return <Chip label={audit.auditOpinion} color="warning" size="small" />;
-                      case 'Adverse':
-                        return <Chip label={audit.auditOpinion} color="error" size="small" />;
-                      case 'Disclaimer':
-                        return <Chip label={audit.auditOpinion} color="default" size="small" />;
-                      default:
-                        return <Chip label={audit.auditOpinion} size="small" />;
-                    }
-                  })()}
-                </TableCell>
-                <TableCell>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full" 
-                      style={{ width: `${audit.queriesResolved}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-sm text-gray-600">{audit.queriesResolved}%</span>
-                </TableCell>
-                <TableCell>
-                  {audit.riskFlag ? (
-                    <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">High Risk</span>
-                  ) : (
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Low Risk</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  {['Qualified', 'Adverse', 'Disclaimer'].includes(audit.auditOpinion) && (
-                    <IconButton size="small" title="View Remarks" onClick={() => handleViewRemarks(audit)}>
-                      <Visibility className="text-gray-600" />
-                    </IconButton>
-                  )}
-                  <IconButton size="small" title="View Documents">
-                    <Description className="text-blue-500" />
-                  </IconButton>
-                  <IconButton size="small" title="Download Report">
-                    <PictureAsPdf className="text-red-500" />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        )}
         {auditType === 'performance' && (
           <Table>
             <TableHead>
@@ -405,23 +260,6 @@ const MoeAudit = () => {
     </Dialog>
   );
 
-  const renderRemarksModal = () => (
-    <Dialog open={!!viewingAudit} onClose={handleCloseRemarks} maxWidth="sm" fullWidth>
-      <DialogTitle>Audit Remarks for {viewingAudit?.programCode}</DialogTitle>
-      <DialogContent>
-        <div className="space-y-2">
-          <p><strong>Opinion:</strong> <Chip label={viewingAudit?.auditOpinion} size="small" /></p>
-          <p><strong>Feedback:</strong> {viewingAudit?.feedback}</p>
-          <p className="font-semibold mt-2">Remarks:</p>
-          <p className="p-2 bg-gray-100 rounded border">{viewingAudit?.remarks}</p>
-        </div>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleCloseRemarks}>Close</Button>
-      </DialogActions>
-    </Dialog>
-  );
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -438,7 +276,6 @@ const MoeAudit = () => {
 
       {renderAuditTable()}
       {renderNewAuditForm()}
-      {renderRemarksModal()}
     </div>
   );
 };
