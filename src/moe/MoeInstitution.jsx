@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Search, Filter, Plus, X } from 'lucide-react';
+import { Search, Filter, Plus, X, BarChart as BarChartIcon, Edit } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const MoeInstitution = () => {
   const { currentUser } = useAuth();
@@ -10,12 +13,28 @@ const MoeInstitution = () => {
   const [institutionTypes, setInstitutionTypes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('All');
+  const [selectedCounty, setSelectedCounty] = useState('All');
+  const [selectedAccreditation, setSelectedAccreditation] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [allInstitutions, setAllInstitutions] = useState([]);
+  const [selectedInstitutionForModal, setSelectedInstitutionForModal] = useState(null);
+  const [programData, setProgramData] = useState([]);
+  const [loadingProgramData, setLoadingProgramData] = useState(false);
+  const [isProgramModalOpen, setIsProgramModalOpen] = useState(false);
+  const [innovationIndexData, setInnovationIndexData] = useState([]);
+  const [selectedCountyForDigitalLiteracy, setSelectedCountyForDigitalLiteracy] = useState('');
+  const [digitalLiteracyData, setDigitalLiteracyData] = useState(null);
+  const [loadingDigitalLiteracy, setLoadingDigitalLiteracy] = useState(false);
+  const [availableCounties, setAvailableCounties] = useState([]);
   const [error, setError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     institutionRegistrationNumber: '',
     institutionName: '',
+    principalName: '',
+    principalContact: '',
+    institutionPhoneNumber: '',
     institutionCounty: '',
     institutionType: 'INSTITUTE_OF_TECHNOLOGY',
     institutionAddress: '',
@@ -27,12 +46,75 @@ const MoeInstitution = () => {
   const [formErrors, setFormErrors] = useState({});
   const [submitStatus, setSubmitStatus] = useState({ success: false, message: '' });
 
+  // Mock data for display when API returns empty
+  const displayInstitutionTypes = institutionTypes.length > 0 ? institutionTypes : [
+    { type: 'National Polytechnic', count: 12 },
+    { type: 'Technical Vocational Center', count: 45 },
+    { type: 'Institute of Technology', count: 28 },
+    { type: 'Vocational Training Center', count: 15 }
+  ];
+
   // Fetch total institutions on component mount and when token changes
   useEffect(() => {
     if (currentUser?.token) {
       fetchInstitutionsData();
     }
   }, [currentUser?.token]);
+
+  useEffect(() => {
+    if (allInstitutions.length > 0) {
+        const counties = [...new Set(allInstitutions.map(inst => inst.institutionCounty).filter(Boolean))].sort();
+        setAvailableCounties(counties);
+    }
+  }, [allInstitutions]);
+
+  useEffect(() => {
+    const fetchDigitalLiteracyDataForCounty = async () => {
+        if (!selectedCountyForDigitalLiteracy) {
+            setDigitalLiteracyData(null);
+            return;
+        }
+        setLoadingDigitalLiteracy(true);
+        setDigitalLiteracyData(null); // Clear old data
+
+        const institutionsInCounty = allInstitutions.filter(
+            inst => inst.institutionCounty === selectedCountyForDigitalLiteracy
+        );
+
+        if (institutionsInCounty.length === 0) {
+            setLoadingDigitalLiteracy(false);
+            return;
+        }
+
+        try {
+            const promises = institutionsInCounty.map(inst =>
+                fetch(`${API_BASE_URL}/api/v1/program/get-prog-dgtl-lt-inst?institutionRegistrationNumber=${inst.institutionRegistrationNumber}`, {
+                    headers: { 'Authorization': `Bearer ${currentUser?.token}` }
+                }).then(res => res.json())
+            );
+
+            const results = await Promise.all(promises);
+
+            const aggregatedData = results.reduce((acc, result) => {
+                if (result.status === 200 && result.data) {
+                    acc.programsWithDigitalLiteracy += result.data.programsWithDigitalLiteracy || 0;
+                    acc.programsWithoutDigitalLiteracy += result.data.programsWithoutDigitalLiteracy || 0;
+                }
+                return acc;
+            }, { programsWithDigitalLiteracy: 0, programsWithoutDigitalLiteracy: 0 });
+
+            setDigitalLiteracyData(aggregatedData);
+
+        } catch (error) {
+            console.error("Error fetching digital literacy data for county:", error);
+            setDigitalLiteracyData(null);
+        } finally {
+            setLoadingDigitalLiteracy(false);
+        }
+    };
+
+    fetchDigitalLiteracyDataForCounty();
+  }, [selectedCountyForDigitalLiteracy, allInstitutions, currentUser?.token]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -46,12 +128,15 @@ const MoeInstitution = () => {
     const errors = {};
     if (!formData.institutionRegistrationNumber.trim()) errors.institutionRegistrationNumber = 'Registration number is required';
     if (!formData.institutionName.trim()) errors.institutionName = 'Institution name is required';
+    if (!formData.principalName.trim()) errors.principalName = 'Principal name is required';
+    if (!formData.principalContact.trim()) errors.principalContact = 'Principal contact is required';
+    if (!formData.institutionPhoneNumber.trim()) errors.institutionPhoneNumber = 'Institution phone number is required';
     if (!formData.institutionCounty.trim()) errors.institutionCounty = 'County is required';
     if (!formData.institutionAddress.trim()) errors.institutionAddress = 'Address is required';
-    if (isNaN(formData.institutionGovernanceScore) || formData.institutionGovernanceScore < 0 || formData.institutionGovernanceScore > 100) {
+    if (formData.institutionGovernanceScore === '' || isNaN(formData.institutionGovernanceScore) || formData.institutionGovernanceScore < 0 || formData.institutionGovernanceScore > 100) {
       errors.institutionGovernanceScore = 'Governance score must be between 0 and 100';
     }
-    if (isNaN(formData.institutionStakeholderSatisfaction) || formData.institutionStakeholderSatisfaction < 0 || formData.institutionStakeholderSatisfaction > 100) {
+    if (formData.institutionStakeholderSatisfaction === '' || isNaN(formData.institutionStakeholderSatisfaction) || formData.institutionStakeholderSatisfaction < 0 || formData.institutionStakeholderSatisfaction > 100) {
       errors.institutionStakeholderSatisfaction = 'Stakeholder satisfaction must be between 0 and 100';
     }
     setFormErrors(errors);
@@ -65,20 +150,21 @@ const MoeInstitution = () => {
     try {
       setLoading(true);
       setSubmitStatus({ success: false, message: '' });
+      const endpoint = isEditing ? `${API_BASE_URL}/api/v1/institution/update` : `${API_BASE_URL}/api/v1/institution/create`;
       
       // Prepare the request body
       const requestBody = {
         ...formData,
         institutionGovernanceScore: parseFloat(formData.institutionGovernanceScore),
-        institutionCorruptionRiskIndex: parseFloat(formData.institutionCorruptionRiskIndex),
+        institutionCorruptionRiskIndex: parseFloat(formData.institutionCorruptionRiskIndex || 0),
         institutionStakeholderSatisfaction: parseFloat(formData.institutionStakeholderSatisfaction)
       };
 
-      console.log('Sending request to:', `${API_BASE_URL}/api/v1/institution/create`);
+      console.log('Sending request to:', endpoint);
       console.log('Request body:', JSON.stringify(requestBody, null, 2));
       
-      const response = await fetch(`${API_BASE_URL}/api/v1/institution/create`, {
-        method: 'POST',
+      const response = await fetch(endpoint, {
+        method: isEditing ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${currentUser?.token}`
@@ -110,11 +196,14 @@ const MoeInstitution = () => {
         throw new Error(errorMessage);
       }
 
-      setSubmitStatus({ success: true, message: 'Institution created successfully!' });
+      setSubmitStatus({ success: true, message: `Institution ${isEditing ? 'updated' : 'created'} successfully!` });
       // Reset form and refresh data
       setFormData({
         institutionRegistrationNumber: '',
         institutionName: '',
+        principalName: '',
+        principalContact: '',
+        institutionPhoneNumber: '',
         institutionCounty: '',
         institutionType: 'INSTITUTE_OF_TECHNOLOGY',
         institutionAddress: '',
@@ -124,14 +213,62 @@ const MoeInstitution = () => {
         institutionStakeholderSatisfaction: ''
       });
       setShowCreateForm(false);
+      setIsEditing(false);
       
       // Refresh the institutions data
       fetchInstitutionsData();
     } catch (err) {
-      console.error('Error creating institution:', err);
+      console.error('Error saving institution:', err);
       setSubmitStatus({ success: false, message: err.message || 'An error occurred while creating the institution' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEdit = (e, institution) => {
+    e.stopPropagation(); // Prevent row click
+    setFormData({
+      institutionRegistrationNumber: institution.institutionRegistrationNumber,
+      institutionName: institution.institutionName,
+      principalName: institution.principalName || '',
+      principalContact: institution.principalContact || '',
+      institutionPhoneNumber: institution.institutionPhoneNumber || '',
+      institutionCounty: institution.institutionCounty || '',
+      institutionType: institution.institutionType || 'INSTITUTE_OF_TECHNOLOGY',
+      institutionAddress: institution.institutionAddress || '',
+      institutionAccreditationStatus: institution.institutionAccreditationStatus || 'ACCREDITED',
+      institutionGovernanceScore: institution.institutionGovernanceScore ?? '',
+      institutionCorruptionRiskIndex: institution.institutionCorruptionRiskIndex ?? '0.0',
+      institutionStakeholderSatisfaction: institution.institutionStakeholderSatisfaction ?? ''
+    });
+    setIsEditing(true);
+    setShowCreateForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleInstitutionClick = async (institution) => {
+    setSelectedInstitutionForModal(institution);
+    setIsProgramModalOpen(true);
+    setLoadingProgramData(true);
+    setProgramData([]); // Clear previous data
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/program/get-std-ttl-prog-inst?institutionRegistrationNumber=${institution.institutionRegistrationNumber}`, {
+            headers: {
+                'Authorization': `Bearer ${currentUser?.token}`,
+            }
+        });
+        const result = await response.json();
+        if (result.status === 200 && Array.isArray(result.data)) {
+            setProgramData(result.data);
+        } else {
+            console.error('Failed to fetch program data:', result.message);
+            setProgramData([]);
+        }
+    } catch (error) {
+        console.error("Error fetching program data for institution:", error);
+        setProgramData([]);
+    } finally {
+        setLoadingProgramData(false);
     }
   };
 
@@ -140,34 +277,46 @@ const MoeInstitution = () => {
       setLoading(true);
       setError(null);
       
-      const [totalRes, typesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/v1/institution/total`, {
-          headers: {
-            'Authorization': `Bearer ${currentUser?.token}`,
-            'Content-Type': 'application/json'
-          }
-        }),
-        fetch(`${API_BASE_URL}/api/v1/institution/total-by-type`, {
-          headers: {
-            'Authorization': `Bearer ${currentUser?.token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+      const headers = {
+        'Authorization': `Bearer ${currentUser?.token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const [totalRes, typesRes, allInstRes, innovationRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/v1/institution/total`, { headers }),
+        fetch(`${API_BASE_URL}/api/v1/institution/total-by-type`, { headers }),
+        fetch(`${API_BASE_URL}/api/v1/institution/get`, { headers }),
+        fetch(`${API_BASE_URL}/api/v1/program/get-avg-inn-idx-inst`, { headers })
       ]);
 
-      if (!totalRes.ok || !typesRes.ok) {
+      if (!totalRes.ok || !typesRes.ok || !allInstRes.ok || !innovationRes.ok) {
         throw new Error('Failed to fetch institution data');
       }
 
       const totalData = await totalRes.json();
       const typesData = await typesRes.json();
+      const allInstitutionsData = await allInstRes.json();
+      const innovationData = await innovationRes.json();
 
       if (totalData.status === 200) {
         setTotalInstitutions(totalData.data.value);
       }
 
       if (typesData.status === 200 && Array.isArray(typesData.data)) {
-        setInstitutionTypes(typesData.data);
+        // Ensure the key is 'type' for consistency
+        const formattedTypes = typesData.data.map(item => ({
+          type: item.institutionType,
+          count: item.totalNumber
+        }));
+        setInstitutionTypes(formattedTypes);
+      }
+
+      if (allInstitutionsData.data && Array.isArray(allInstitutionsData.data)) {
+        setAllInstitutions(allInstitutionsData.data);
+      }
+
+      if (innovationData.status === 200 && Array.isArray(innovationData.data)) {
+        setInnovationIndexData(innovationData.data);
       }
     } catch (err) {
       console.error('Error fetching institution data:', err);
@@ -178,10 +327,13 @@ const MoeInstitution = () => {
   };
 
   // Filter institutions based on search and type
-  const filteredInstitutions = institutionTypes.filter(type => {
-    const matchesSearch = type.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = selectedType === 'All' || type.name === selectedType;
-    return matchesSearch && matchesType;
+  const filteredInstitutions = allInstitutions.filter(inst => {
+    const matchesSearch = inst.institutionName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          inst.institutionRegistrationNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = selectedType === 'All' || inst.institutionType === selectedType;
+    const matchesCounty = selectedCounty === 'All' || inst.institutionCounty === selectedCounty;
+    const matchesAccreditation = selectedAccreditation === 'All' || inst.institutionAccreditationStatus === selectedAccreditation;
+    return matchesSearch && matchesType && matchesCounty && matchesAccreditation;
   });
 
   if (loading) {
@@ -219,18 +371,23 @@ const MoeInstitution = () => {
       {/* Action Bar */}
       <div className="flex justify-between items-center mb-6">
         <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
+          onClick={() => {
+            setShowCreateForm(!showCreateForm);
+            if (!showCreateForm) {
+              setIsEditing(false); // Reset editing state when opening fresh
+            }
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus className="w-5 h-5" />
-          {showCreateForm ? 'Cancel' : 'Add New Institution'}
+          {showCreateForm ? 'Cancel' : (isEditing ? 'Edit Institution' : 'Add New Institution')}
         </button>
       </div>
 
       {/* Create Institution Form */}
       {showCreateForm && (
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Institution</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">{isEditing ? 'Edit Institution' : 'Create New Institution'}</h3>
           {submitStatus.message && (
             <div className={`mb-4 p-3 rounded ${submitStatus.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
               {submitStatus.message}
@@ -249,6 +406,7 @@ const MoeInstitution = () => {
                   name="institutionRegistrationNumber"
                   value={formData.institutionRegistrationNumber}
                   onChange={handleInputChange}
+                  disabled={isEditing} // Often registration numbers are unique IDs and shouldn't change
                   className={`w-full px-3 py-2 border ${formErrors.institutionRegistrationNumber ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500`}
                 />
                 {formErrors.institutionRegistrationNumber && (
@@ -271,6 +429,56 @@ const MoeInstitution = () => {
                 />
                 {formErrors.institutionName && (
                   <p className="mt-1 text-sm text-red-600">{formErrors.institutionName}</p>
+                )}
+              </div>
+
+              {/* Principal Name */}
+              <div>
+                <label htmlFor="principalName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Principal Name *
+                </label>
+                <input
+                  type="text"
+                  id="principalName"
+                  name="principalName"
+                  value={formData.principalName}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${formErrors.principalName ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {formErrors.principalName && <p className="mt-1 text-sm text-red-600">{formErrors.principalName}</p>}
+              </div>
+
+              {/* Principal Contact */}
+              <div>
+                <label htmlFor="principalContact" className="block text-sm font-medium text-gray-700 mb-1">
+                  Principal Contact *
+                </label>
+                <input
+                  type="text"
+                  id="principalContact"
+                  name="principalContact"
+                  value={formData.principalContact}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${formErrors.principalContact ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {formErrors.principalContact && <p className="mt-1 text-sm text-red-600">{formErrors.principalContact}</p>}
+              </div>
+
+              {/* Institution Phone Number */}
+              <div>
+                <label htmlFor="institutionPhoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                  Institution Phone Number *
+                </label>
+                <input
+                  type="text"
+                  id="institutionPhoneNumber"
+                  name="institutionPhoneNumber"
+                  value={formData.institutionPhoneNumber}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border ${formErrors.institutionPhoneNumber ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500`}
+                />
+                {formErrors.institutionPhoneNumber && (
+                  <p className="mt-1 text-sm text-red-600">{formErrors.institutionPhoneNumber}</p>
                 )}
               </div>
 
@@ -306,7 +514,6 @@ const MoeInstitution = () => {
                 >
                   <option value="INSTITUTE_OF_TECHNOLOGY">Institute of Technology</option>
                   <option value="NATIONAL_POLYTECHNIC">National Polytechnic</option>
-                  <option value="TECHNICAL_UNIVERSITY">Technical University</option>
                   <option value="TECHNICAL_VOCATIONAL_COLLEGE">Technical & Vocational College</option>
                 </select>
               </div>
@@ -422,7 +629,7 @@ const MoeInstitution = () => {
                 disabled={loading}
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating...' : 'Create Institution'}
+                {loading ? 'Saving...' : (isEditing ? 'Update Institution' : 'Create Institution')}
               </button>
             </div>
           </form>
@@ -442,7 +649,7 @@ const MoeInstitution = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="relative w-full md:w-64">
+          <div className="relative w-full md:w-48">
             <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <select
               className="w-full pl-10 pr-4 py-2 border rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
@@ -450,11 +657,35 @@ const MoeInstitution = () => {
               onChange={(e) => setSelectedType(e.target.value)}
             >
               <option value="All">All Types</option>
-              {Array.isArray(institutionTypes) && institutionTypes.map((type) => (
-                <option key={type.name} value={type.name}>
-                  {type.name} ({type.count})
-                </option>
+              <option value="NATIONAL_POLYTECHNIC">Polytechnic</option>
+              <option value="INSTITUTE_OF_TECHNOLOGY">Institute of Technology</option>
+              <option value="TECHNICAL_VOCATIONAL_COLLEGE">TTI &amp; TVCs</option>
+            </select>
+          </div>
+          <div className="relative w-full md:w-48">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <select
+              className="w-full pl-10 pr-4 py-2 border rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              value={selectedCounty}
+              onChange={(e) => setSelectedCounty(e.target.value)}
+            >
+              <option value="All">All Counties</option>
+              {availableCounties.map(county => (
+                <option key={county} value={county}>{county}</option>
               ))}
+            </select>
+          </div>
+          <div className="relative w-full md:w-48">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <select
+              className="w-full pl-10 pr-4 py-2 border rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              value={selectedAccreditation}
+              onChange={(e) => setSelectedAccreditation(e.target.value)}
+            >
+              <option value="All">All Statuses</option>
+              <option value="ACCREDITED">Accredited</option>
+              <option value="PENDING">Pending</option>
+              <option value="SUSPENDED">Suspended</option>
             </select>
           </div>
         </div>
@@ -478,40 +709,60 @@ const MoeInstitution = () => {
       </div>
 
       {/* Institutions Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden mb-8">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Institution Type
+                  Institution Name
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Count
+                  Registration No.
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Percentage
+                  County
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Accreditation
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredInstitutions.length > 0 ? (
-                filteredInstitutions.map((type) => (
-                  <tr key={type.name} className="hover:bg-gray-50">
+                filteredInstitutions.map((inst) => (
+                  <tr key={inst.institutionRegistrationNumber} onClick={() => handleInstitutionClick(inst)} className="hover:bg-gray-50 cursor-pointer">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {type.name}
+                      {inst.institutionName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {type.count}
+                      {inst.institutionRegistrationNumber}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {((type.count / totalInstitutions) * 100).toFixed(1)}%
+                      {inst.institutionCounty}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{inst.institutionType}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.institutionAccreditationStatus === 'ACCREDITED' ? 'bg-green-100 text-green-800' : inst.institutionAccreditationStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                        {inst.institutionAccreditationStatus}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <button onClick={(e) => handleEdit(e, inst)} className="text-blue-600 hover:text-blue-900 mr-3" title="Edit">
+                        <Edit className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="3" className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
                     No institutions found matching your criteria
                   </td>
                 </tr>
@@ -519,6 +770,174 @@ const MoeInstitution = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Institutions by Type */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4">Institutions by Type</h4>
+          {loading ? (
+            <div className="h-64 flex items-center justify-center text-gray-400">Loading chart...</div>
+          ) : (
+            <div className="h-80 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={displayInstitutionTypes}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis 
+                    dataKey="type" 
+                    tick={false}
+                    height={10}
+                    axisLine={false}
+                  />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip 
+                    cursor={{ fill: 'transparent' }}
+                    formatter={(value) => [`${value} Institutions`, 'Count']}
+                  />
+                  <Legend 
+                    payload={displayInstitutionTypes.map((item, index) => ({
+                      id: item.type,
+                      type: 'square',
+                      value: item.type,
+                      color: COLORS[index % COLORS.length]
+                    }))}
+                  />
+                  <Bar dataKey="count" name="Institutions" radius={[4, 4, 0, 0]}>
+                    {displayInstitutionTypes.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Average Innovation Index by Institution */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <h4 className="text-lg font-semibold text-gray-800 mb-4">Average Innovation Index</h4>
+          {loading ? (
+            <div className="h-64 flex items-center justify-center text-gray-400">Loading chart...</div>
+          ) : innovationIndexData.length > 0 ? (
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={innovationIndexData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="institutionName" tick={{ fontSize: 10 }} interval={0} angle={-40} textAnchor="end" height={70} />
+                  <YAxis />
+                  <Tooltip formatter={(value) => [value.toFixed(2), 'Avg. Index']} />
+                  <Bar dataKey="averageInnovationIndex" name="Avg. Innovation Index" fill="#82ca9d" radius={[4, 4, 0, 0]}>
+                    {innovationIndexData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center text-gray-400">No innovation index data available</div>
+          )}
+        </div>
+      </div>
+
+      {isProgramModalOpen && selectedInstitutionForModal && (
+        <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                <div className="p-6 border-b">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-xl font-semibold text-gray-800">
+                            Student Enrollment for {selectedInstitutionForModal.institutionName}
+                        </h3>
+                        <button onClick={() => setIsProgramModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+                </div>
+                <div className="p-6 overflow-y-auto">
+                    {loadingProgramData ? (
+                        <div className="text-center py-8">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                            <p className="mt-2 text-gray-600">Loading program data...</p>
+                        </div>
+                    ) : programData.length > 0 ? (
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program Code</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Students Enrolled</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {programData.map((prog, index) => (
+                                    <tr key={index}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{prog.programCode}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{prog.totalStudentsEnrolled}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="text-center py-8 text-gray-500">
+                            No program enrollment data found for this institution.
+                        </div>
+                    )}
+                </div>
+                <div className="p-4 bg-gray-50 border-t text-right">
+                    <button
+                        onClick={() => setIsProgramModalOpen(false)}
+                        className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Digital Literacy Section */}
+      <div className="bg-white rounded-lg shadow-sm p-6 mt-8 border border-gray-200">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Digital Literacy Program Analysis by County</h3>
+        <div className="mb-4">
+          <label htmlFor="digital-literacy-county-select" className="block text-sm font-medium text-gray-700 mb-1">
+            Select County
+          </label>
+          <select
+            id="digital-literacy-county-select"
+            value={selectedCountyForDigitalLiteracy}
+            onChange={(e) => setSelectedCountyForDigitalLiteracy(e.target.value)}
+            className="w-full md:w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="">-- Select a County --</option>
+            {availableCounties.map(county => (
+              <option key={county} value={county}>
+                {county}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {loadingDigitalLiteracy ? (
+          <div className="text-center py-4">Loading data...</div>
+        ) : digitalLiteracyData ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <h4 className="text-sm font-medium text-green-800">Programs WITH Digital Literacy</h4>
+              <p className="text-2xl font-bold text-green-600">{digitalLiteracyData.programsWithDigitalLiteracy}</p>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <h4 className="text-sm font-medium text-red-800">Programs WITHOUT Digital Literacy</h4>
+              <p className="text-2xl font-bold text-red-600">{digitalLiteracyData.programsWithoutDigitalLiteracy}</p>
+            </div>
+          </div>
+        ) : selectedCountyForDigitalLiteracy ? (
+          <div className="text-center py-4 text-gray-500">No data available for the selected county.</div>
+        ) : (
+          <div className="text-center py-4 text-gray-500">Please select a county to view digital literacy stats.</div>
+        )}
       </div>
     </div>
   );

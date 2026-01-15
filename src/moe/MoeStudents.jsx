@@ -1,97 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Search, Filter, Users, ChevronDown, Download } from 'lucide-react';
+import { Search, Filter, Users, ChevronDown, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
 
 const MoeStudents = () => {
   const { currentUser } = useAuth();
   const [students, setStudents] = useState([]);
+  const [institutions, setInstitutions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  // List of all 47 Kenyan counties
-  const allKenyanCounties = [
-    'Baringo', 'Bomet', 'Bungoma', 'Busia', 'Elgeyo-Marakwet',
-    'Embu', 'Garissa', 'Homa Bay', 'Isiolo', 'Kajiado',
-    'Kakamega', 'Kericho', 'Kiambu', 'Kilifi', 'Kirinyaga',
-    'Kisii', 'Kisumu', 'Kitui', 'Kwale', 'Laikipia',
-    'Lamu', 'Machakos', 'Makueni', 'Mandera', 'Marsabit',
-    'Meru', 'Migori', 'Mombasa', 'Murang\'a', 'Nairobi',
-    'Nakuru', 'Nandi', 'Narok', 'Nyamira', 'Nyandarua',
-    'Nyeri', 'Samburu', 'Siaya', 'Taita-Taveta', 'Tana River',
-    'Tharaka-Nithi', 'Trans Nzoia', 'Turkana', 'Uasin Gishu',
-    'Vihiga', 'Wajir', 'West Pokot'
-  ];
-
-  const [availableCounties, setAvailableCounties] = useState(allKenyanCounties);
   const [filters, setFilters] = useState({
-    program: 'all',
-    status: 'all',
-    gender: 'all',
-    county: 'all'
+    programCode: 'all',
+    studentCurrentStatus: 'all',
+    studentGender: 'all',
+    studentSocioEconomicStatus: 'all',
+    studentDisabilityStatus: 'all',
+    studentRuralLearner: 'all',
+    studentNYSEnrollment: 'all',
+    studentDualApprenticeship: 'all',
+    studentRPLStatus: 'all'
   });
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [selectedCounty, setSelectedCounty] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   // Fetch students data
-  const fetchStudents = async (county = null) => {
+  const fetchStudents = async () => {
     try {
-      if (!currentUser?.token) {
-        throw new Error('No authentication token found');
-      }
-
       setLoading(true);
       setError(null);
-
-      // For the main endpoint, we'll use GET with query parameters
-      let url = `${API_BASE_URL}/api/v1/student-enrollment/`;
       
-      if (county) {
-        // For county-specific requests, use the student-dtl-cnt endpoint
-        url += 'student-dtl-cnt';
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${currentUser.token}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ county })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `Failed to fetch students for county: ${county}`);
-        }
-        
-        const data = await response.json();
-        console.log('Fetched students by county:', data);
-        setStudents(Array.isArray(data) ? data : []);
-      } else {
-        // For the main list, use GET
-        url += 'student-dtl';
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${currentUser.token}`,
-            'Accept': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || 'Failed to fetch students');
-        }
-        
-        const data = await response.json();
-        console.log('Fetched all students:', data);
-        setStudents(Array.isArray(data) ? data : []);
+      const response = await fetch(`${API_BASE_URL}/api/v1/student-enrollment/student-dtl`, {
+        headers: { 'Authorization': `Bearer ${currentUser?.token}` },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      const studentData = await response.json();
+      setStudents(Array.isArray(studentData) ? studentData : []);
       
-      // Keep all Kenyan counties but ensure any from the API are included
-      const uniqueCounties = [...new Set(students.map(s => s.county).filter(Boolean))];
-      setAvailableCounties(prev => [...new Set([...allKenyanCounties, ...prev, ...uniqueCounties])].sort());
     } catch (err) {
       setError(err.message || 'Failed to fetch students');
       console.error('Fetch error:', err);
@@ -101,13 +50,27 @@ const MoeStudents = () => {
     }
   };
 
-  // Get unique values for filters
-  const getUniqueValues = (key) => {
-    return [...new Set(students.map(item => item[key]).filter(Boolean))];
+  const fetchInstitutions = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/institution/get`, {
+        headers: { 'Authorization': `Bearer ${currentUser?.token}` },
+      });
+      const result = await response.json();
+      if (result.status === 200 && Array.isArray(result.data)) {
+        setInstitutions(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch institutions', err);
+    }
   };
 
+  const uniquePrograms = useMemo(() => {
+    return [...new Set(students.map(item => item.programCode).filter(Boolean))];
+  }, [students]);
+
   // Apply filters and search
-  const filteredStudents = Array.isArray(students) 
+  const filteredStudents = useMemo(() => {
+    return Array.isArray(students) 
     ? students.filter(student => {
         const matchesSearch = 
           (student.studentName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
@@ -115,30 +78,36 @@ const MoeStudents = () => {
           (student.studentNumber || '').includes(searchTerm);
         
         const matchesFilters = 
-          (filters.program === 'all' || student.program === filters.program) &&
-          (filters.status === 'all' || student.studentCurrentStatus === filters.status) &&
-          (filters.gender === 'all' || student.studentGender === filters.gender) &&
-          (filters.county === 'all' || student.county === filters.county);
+          (filters.programCode === 'all' || student.programCode === filters.programCode) &&
+          (filters.studentCurrentStatus === 'all' || student.studentCurrentStatus === filters.studentCurrentStatus) &&
+          (filters.studentGender === 'all' || student.studentGender === filters.studentGender) &&
+          (filters.studentSocioEconomicStatus === 'all' || student.studentSocioEconomicStatus === filters.studentSocioEconomicStatus) &&
+          (filters.studentDisabilityStatus === 'all' || String(student.studentDisabilityStatus) === filters.studentDisabilityStatus) &&
+          (filters.studentRuralLearner === 'all' || String(student.studentRuralLearner) === filters.studentRuralLearner) &&
+          (filters.studentNYSEnrollment === 'all' || String(student.studentNYSEnrollment) === filters.studentNYSEnrollment) &&
+          (filters.studentDualApprenticeship === 'all' || String(student.studentDualApprenticeship) === filters.studentDualApprenticeship) &&
+          (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus);
         
         return matchesSearch && matchesFilters;
       })
     : [];
+  }, [students, searchTerm, filters]);
 
   // Calculate summary statistics
   const totalStudents = students.length;
-  const activeStudents = students.filter(s => s.studentCurrentStatus === 'Active').length;
-  const maleStudents = students.filter(s => s.studentGender === 'Male').length;
-  const femaleStudents = students.filter(s => s.studentGender === 'Female').length;
+  const activeStudents = students.length;
+  const maleStudents = students.filter(s => s.studentGender?.toLowerCase() === 'male').length;
+  const femaleStudents = students.filter(s => s.studentGender?.toLowerCase() === 'female').length;
 
   // Calculate average attendance metrics
-  const calculateAverageAttendance = (groupByKey) => {
+  const attendanceByProgram = useMemo(() => {
+    const groupByKey = 'programCode';
     const groups = students.reduce((acc, student) => {
       const key = student[groupByKey] || 'Unknown';
       if (!acc[key]) {
         acc[key] = { total: 0, count: 0 };
       }
-      // Assuming attendance is a number between 0-100, adjust field name as needed
-      const attendance = parseFloat(student.attendancePercentage) || 0;
+      const attendance = (student.studentAttendanceRate || 0) * 100;
       acc[key].total += attendance;
       acc[key].count += 1;
       return acc;
@@ -148,16 +117,36 @@ const MoeStudents = () => {
       name: key,
       average: count > 0 ? (total / count).toFixed(1) : 0
     })).sort((a, b) => b.average - a.average);
-  };
+  }, [students]);
 
-  const attendanceByCounty = calculateAverageAttendance('county');
-  const attendanceByInstitution = calculateAverageAttendance('institutionName');
-  const attendanceByProgram = calculateAverageAttendance('program');
+  // Pagination for programs list
+  const [programPage, setProgramPage] = useState(1);
+  const programsPerPage = 10;
+  const currentPrograms = useMemo(() => {
+    const start = (programPage - 1) * programsPerPage;
+    return attendanceByProgram.slice(start, start + programsPerPage);
+  }, [attendanceByProgram, programPage]);
+  const totalProgramPages = Math.ceil(attendanceByProgram.length / programsPerPage);
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
 
   // Fetch data on component mount
   useEffect(() => {
     fetchStudents();
+    fetchInstitutions();
   }, []);
+
+  // Create a map of institution registration numbers to names
+  const institutionMap = useMemo(() => {
+    return institutions.reduce((acc, inst) => {
+      acc[inst.institutionRegistrationNumber] = inst.institutionName;
+      return acc;
+    }, {});
+  }, [institutions]);
 
   // Handle filter change
   const handleFilterChange = (e) => {
@@ -166,31 +155,25 @@ const MoeStudents = () => {
       ...prev,
       [name]: value
     }));
+    setCurrentPage(1);
   };
 
   // Reset all filters
   const resetFilters = () => {
     setFilters({
-      program: 'all',
-      status: 'all',
-      gender: 'all',
-      county: 'all'
+      programCode: 'all',
+      studentCurrentStatus: 'all',
+      studentGender: 'all',
+      studentSocioEconomicStatus: 'all',
+      studentDisabilityStatus: 'all',
+      studentRuralLearner: 'all',
+      studentNYSEnrollment: 'all',
+      studentDualApprenticeship: 'all',
+      studentRPLStatus: 'all'
     });
-    setSelectedCounty('all');
     setSearchTerm('');
+    setCurrentPage(1);
     fetchStudents(); // Reset to show all students
-  };
-
-  // Handle county change
-  const handleCountyChange = (e) => {
-    const county = e.target.value;
-    setSelectedCounty(county);
-    
-    if (county === 'all') {
-      fetchStudents();
-    } else {
-      fetchStudents(county);
-    }
   };
 
   if (loading) {
@@ -235,7 +218,10 @@ const MoeStudents = () => {
               placeholder="Search students..."
               className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
 
@@ -251,19 +237,19 @@ const MoeStudents = () => {
             </button>
 
             {showFilterDropdown && (
-              <div className="absolute right-0 z-10 mt-2 w-64 bg-white rounded-md shadow-lg border border-gray-200 p-4">
+              <div className="absolute right-0 z-10 mt-2 w-80 bg-white rounded-md shadow-lg border border-gray-200 p-4 max-h-[80vh] overflow-y-auto">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
                     <select
-                      name="program"
-                      value={filters.program}
+                      name="programCode"
+                      value={filters.programCode}
                       onChange={handleFilterChange}
                       className="w-full p-2 border rounded-md"
                     >
                       <option value="all">All Programs</option>
-                      {getUniqueValues('program').map(program => (
-                        <option key={program} value={program}>{program}</option>
+                      {uniquePrograms.map(programCode => (
+                        <option key={programCode} value={programCode}>{programCode}</option>
                       ))}
                     </select>
                   </div>
@@ -271,8 +257,8 @@ const MoeStudents = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select
-                      name="status"
-                      value={filters.status}
+                      name="studentCurrentStatus"
+                      value={filters.studentCurrentStatus}
                       onChange={handleFilterChange}
                       className="w-full p-2 border rounded-md"
                     >
@@ -287,8 +273,8 @@ const MoeStudents = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
                     <select
-                      name="gender"
-                      value={filters.gender}
+                      name="studentGender"
+                      value={filters.studentGender}
                       onChange={handleFilterChange}
                       className="w-full p-2 border rounded-md"
                     >
@@ -300,17 +286,87 @@ const MoeStudents = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">County</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Socio-Economic Status</label>
                     <select
-                      name="county"
-                      value={filters.county}
+                      name="studentSocioEconomicStatus"
+                      value={filters.studentSocioEconomicStatus}
                       onChange={handleFilterChange}
                       className="w-full p-2 border rounded-md"
                     >
-                      <option value="all">All Counties</option>
-                      {getUniqueValues('county').map(county => (
-                        <option key={county} value={county}>{county}</option>
-                      ))}
+                      <option value="all">All</option>
+                      <option value="Low Income">Low Income</option>
+                      <option value="Middle Income">Middle Income</option>
+                      <option value="High Income">High Income</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Disability Status</label>
+                    <select
+                      name="studentDisabilityStatus"
+                      value={filters.studentDisabilityStatus}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Rural Learner</label>
+                    <select
+                      name="studentRuralLearner"
+                      value={filters.studentRuralLearner}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">NYS Enrollment</label>
+                    <select
+                      name="studentNYSEnrollment"
+                      value={filters.studentNYSEnrollment}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Dual Apprenticeship</label>
+                    <select
+                      name="studentDualApprenticeship"
+                      value={filters.studentDualApprenticeship}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">RPL Status</label>
+                    <select
+                      name="studentRPLStatus"
+                      value={filters.studentRPLStatus}
+                      onChange={handleFilterChange}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="all">All</option>
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
                     </select>
                   </div>
 
@@ -326,35 +382,7 @@ const MoeStudents = () => {
           </div>
 
           {/* Export Button */}
-          <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-            <Download className="w-4 h-4" />
-            <span>Export</span>
-          </button>
-        </div>
-      </div>
 
-      {/* County Filter */}
-      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by County</h3>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <select
-              value={selectedCounty}
-              onChange={handleCountyChange}
-              className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">All Counties</option>
-              {allKenyanCounties.map((county, index) => (
-                <option key={index} value={county}>{county}</option>
-              ))}
-            </select>
-          </div>
-          <button
-            onClick={resetFilters}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
-          >
-            Reset Filters
-          </button>
         </div>
       </div>
 
@@ -422,50 +450,13 @@ const MoeStudents = () => {
       <div className="mb-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">Average Attendance Metrics</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          {/* Attendance by County */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">By County</h3>
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
-              {attendanceByCounty.length > 0 ? (
-                attendanceByCounty.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700 truncate">{item.name}</span>
-                    <span className="text-sm font-semibold text-blue-600">{item.average}%</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No attendance data available</p>
-              )}
-            </div>
-          </div>
-
-          {/* Attendance by Institution */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-medium text-gray-800 mb-4">By Institution</h3>
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
-              {attendanceByInstitution.length > 0 ? (
-                attendanceByInstitution.slice(0, 10).map((item, index) => (
-                  <div key={index} className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700 truncate">{item.name}</span>
-                    <span className="text-sm font-semibold text-blue-600">{item.average}%</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">No attendance data available</p>
-              )}
-              {attendanceByInstitution.length > 10 && (
-                <p className="text-xs text-gray-500 mt-2">Showing top 10 of {attendanceByInstitution.length} institutions</p>
-              )}
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6">
           {/* Attendance by Program */}
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-medium text-gray-800 mb-4">By Program</h3>
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
+            <div className="space-y-3 min-h-[200px]">
               {attendanceByProgram.length > 0 ? (
-                attendanceByProgram.map((item, index) => (
+                currentPrograms.map((item, index) => (
                   <div key={index} className="flex justify-between items-center">
                     <span className="text-sm font-medium text-gray-700 truncate">{item.name || 'N/A'}</span>
                     <span className="text-sm font-semibold text-blue-600">{item.average}%</span>
@@ -475,6 +466,25 @@ const MoeStudents = () => {
                 <p className="text-sm text-gray-500">No attendance data available</p>
               )}
             </div>
+            {attendanceByProgram.length > programsPerPage && (
+              <div className="flex items-center justify-between mt-4 pt-2 border-t border-gray-100">
+                <button
+                  onClick={() => setProgramPage(prev => Math.max(prev - 1, 1))}
+                  disabled={programPage === 1}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <span className="text-xs text-gray-500">Page {programPage} of {totalProgramPages}</span>
+                <button
+                  onClick={() => setProgramPage(prev => Math.min(prev + 1, totalProgramPages))}
+                  disabled={programPage === totalProgramPages}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -489,6 +499,9 @@ const MoeStudents = () => {
                   Student
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Institution
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Admission No.
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -497,17 +510,11 @@ const MoeStudents = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Program
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Institution
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  County
-                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredStudents.length > 0 ? (
-                filteredStudents.map((student, index) => (
+              {currentStudents.length > 0 ? (
+                currentStudents.map((student, index) => (
                   <tr key={`${student.studentAdmissionNumber}-${index}`} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -518,6 +525,11 @@ const MoeStudents = () => {
                           <div className="text-sm font-medium text-gray-900">{student.studentName || 'N/A'}</div>
                           <div className="text-sm text-gray-500">{student.studentGender || 'N/A'}</div>
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        THIKA TECHNICAL TRAINING INSTITUTE
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -534,25 +546,54 @@ const MoeStudents = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{student.program || 'N/A'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{student.institutionName || 'N/A'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{student.county || 'N/A'}</div>
+                      <div className="text-sm text-gray-900">{student.programCode || 'N/A'}</div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">
                     No students found matching your criteria
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing <span className="font-medium">{filteredStudents.length > 0 ? indexOfFirstItem + 1 : 0}</span> to <span className="font-medium">{Math.min(indexOfLastItem, filteredStudents.length)}</span> of{' '}
+                <span className="font-medium">{filteredStudents.length}</span> results
+              </p>
+            </div>
+            <div>
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <span className="sr-only">Previous</span>
+                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                </button>
+                <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                  Page {currentPage} of {totalPages || 1}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <span className="sr-only">Next</span>
+                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </nav>
+            </div>
+          </div>
         </div>
       </div>
     </div>

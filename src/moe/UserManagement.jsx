@@ -137,7 +137,7 @@ const UserManagement = () => {
                     startIcon={<Delete />}
                     onClick={() => handleDelete(user.id)}
                   >
-                    Delete
+                    Close
                   </Button>
                 </TableCell>
               </TableRow>
