@@ -3,14 +3,14 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
   CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line 
 } from 'recharts';
-import { DollarSign, TrendingUp, BarChart2, PieChart as PieIcon, Send, X } from 'lucide-react';
+import { DollarSign, TrendingUp, BarChart2, PieChart as PieIcon, X, Calendar } from 'lucide-react';
 
 // Mock data for MOE level - replace with actual API calls
 const overviewStats = {
-  totalBudget: 'Ksh 50.2B',
+  financialYear: '2023/2024',
+  totalAllocated: 'Ksh 50.2B',
   totalDisbursed: 'Ksh 41.5B',
-  availableBalance: 'Ksh 8.7B',
-  utilizationRate: '82.7%',
+  unallocated: 'Ksh 8.7B',
 };
 
 const nationalFundingAllocation = [
@@ -33,6 +33,14 @@ const expenditureByInstType = [
   { type: 'National Polytechnics', amount: 15.5 },
   { type: 'Institutes of Technology', amount: 12.3 },
   { type: 'TVCs & TTIs', amount: 13.7 },
+];
+
+const expenditureByCounty = [
+  { name: 'Nairobi', amount: 12.5 },
+  { name: 'Kiambu', amount: 8.2 },
+  { name: 'Mombasa', amount: 7.5 },
+  { name: 'Nakuru', amount: 6.8 },
+  { name: 'Uasin Gishu', amount: 5.4 },
 ];
 
 const recentDisbursements = [
@@ -64,13 +72,24 @@ const FinancialManagement = () => {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       <div className="bg-white p-6 rounded-lg shadow">
         <div className="flex items-center">
+          <div className="p-3 rounded-full bg-purple-100 text-purple-600">
+            <Calendar className="h-6 w-6" />
+          </div>
+          <div className="ml-4">
+            <p className="text-gray-500">Financial Year</p>
+            <h3 className="text-2xl font-semibold">{overviewStats.financialYear}</h3>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-lg shadow">
+        <div className="flex items-center">
           <div className="p-3 rounded-full bg-blue-100 text-blue-600">
             <DollarSign className="h-6 w-6" />
           </div>
           <div className="ml-4">
-            <p className="text-gray-500">Total National Budget</p>
-            <h3 className="text-2xl font-semibold">{overviewStats.totalBudget}</h3>
-            <p className="text-green-500 text-sm">+10% from last FY</p>
+            <p className="text-gray-500">Total Allocated</p>
+            <h3 className="text-2xl font-semibold">{overviewStats.totalAllocated}</h3>
           </div>
         </div>
       </div>
@@ -83,7 +102,6 @@ const FinancialManagement = () => {
           <div className="ml-4">
             <p className="text-gray-500">Total Disbursed</p>
             <h3 className="text-2xl font-semibold">{overviewStats.totalDisbursed}</h3>
-            <p className="text-green-500 text-sm">+5% from last month</p>
           </div>
         </div>
       </div>
@@ -94,22 +112,8 @@ const FinancialManagement = () => {
             <BarChart2 className="h-6 w-6" />
           </div>
           <div className="ml-4">
-            <p className="text-gray-500">Available Funds</p>
-            <h3 className="text-2xl font-semibold">{overviewStats.availableBalance}</h3>
-            <p className="text-red-500 text-sm">-2% from last month</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center">
-          <div className="p-3 rounded-full bg-purple-100 text-purple-600">
-            <PieIcon className="h-6 w-6" />
-          </div>
-          <div className="ml-4">
-            <p className="text-gray-500">Budget Utilization</p>
-            <h3 className="text-2xl font-semibold">{overviewStats.utilizationRate}</h3>
-            <p className="text-green-500 text-sm">+3% from last month</p>
+            <p className="text-gray-500">Unallocated</p>
+            <h3 className="text-2xl font-semibold">{overviewStats.unallocated}</h3>
           </div>
         </div>
       </div>
@@ -160,13 +164,6 @@ const FinancialManagement = () => {
               </div>
             ))}
           </div>
-          <button 
-            onClick={() => setShowDisburseModal(true)}
-            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
-          >
-            <Send className="w-4 h-4" />
-            Disburse Funds
-          </button>
         </div>
       </div>
     </div>
@@ -201,6 +198,22 @@ const FinancialManagement = () => {
               <Tooltip formatter={(value) => `Ksh ${value}B`} />
               <Legend />
               <Bar dataKey="amount" fill="#82ca9d" name="Total Expenditure" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Expenditure by County (in Billions Ksh)</h3>
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={expenditureByCounty}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip formatter={(value) => `Ksh ${value}B`} />
+              <Legend />
+              <Bar dataKey="amount" fill="#FF8042" name="Total Expenditure" />
             </BarChart>
           </ResponsiveContainer>
         </div>

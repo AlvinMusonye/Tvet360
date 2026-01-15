@@ -87,22 +87,28 @@ const MoeAudit = () => {
   });
 
   const [newAudit, setNewAudit] = useState({
-    financialYear: '2023/2024',
-    auditOpinion: 'Unqualified',
-    remarks: ''
+    type: 'performance',
+    programCode: '',
+    auditDate: '',
+    efficiencyScore: '',
+    effectiveness: '',
+    recommendations: '',
+    regulation: '',
+    status: '',
+    notes: ''
   });
 
   const handleOpenNewAudit = () => {
     setNewAudit({
+      type: 'performance',
       programCode: '',
       auditDate: new Date().toISOString().split('T')[0],
-      financialYear: '2023/2024',
-      auditOpinion: 'Unqualified',
-      remarks: '',
-      inspectionScore: 80,
-      feedback: '',
-      riskFlag: false,
-      queriesResolved: 100,
+      efficiencyScore: '',
+      effectiveness: 'High',
+      recommendations: '',
+      regulation: '',
+      status: 'Compliant',
+      notes: ''
     });
     setIsNewAuditOpen(true);
   };
@@ -129,7 +135,7 @@ const MoeAudit = () => {
                 onChange={(e) => setAuditType(e.target.value)}
                 label="Audit Type"
               >
-                <MenuItem value="financial">Financial Audit</MenuItem>
+                <MenuItem value="financial">OAG Report Audit</MenuItem>
                 <MenuItem value="performance">Performance Audit</MenuItem>
                 <MenuItem value="compliance">Compliance Audit</MenuItem>
               </Select>
@@ -260,6 +266,7 @@ const MoeAudit = () => {
           <Table>
             <TableHead>
               <TableRow className="bg-gray-100">
+                <TableCell>Program Code</TableCell>
                 <TableCell>Regulation Area</TableCell>
                 <TableCell>Audit Date</TableCell>
                 <TableCell>Status</TableCell>
@@ -269,6 +276,7 @@ const MoeAudit = () => {
             <TableBody>
               {audits.compliance.map((audit) => (
                 <TableRow key={audit.id} hover>
+                  <TableCell>{audit.programCode}</TableCell>
                   <TableCell>{audit.regulation}</TableCell>
                   <TableCell>{audit.auditDate}</TableCell>
                   <TableCell>{audit.status}</TableCell>
@@ -285,20 +293,25 @@ const MoeAudit = () => {
   const renderNewAuditForm = () => (
     <Dialog open={isNewAuditOpen} onClose={handleCloseNewAudit} maxWidth="sm" fullWidth>
       <form onSubmit={(e) => { e.preventDefault(); /* Logic to add audit */ handleCloseNewAudit(); }}>
-        <DialogTitle>Initiate New Financial Audit</DialogTitle>
+        <DialogTitle>Initiate New Program Audit</DialogTitle>
         <DialogContent className="space-y-4 pt-4">
+          <FormControl fullWidth>
+            <InputLabel>Audit Type</InputLabel>
+            <Select
+              name="type"
+              value={newAudit.type}
+              onChange={handleNewAuditChange}
+              label="Audit Type"
+            >
+              <MenuItem value="performance">Performance Audit</MenuItem>
+              <MenuItem value="compliance">Compliance Audit</MenuItem>
+            </Select>
+          </FormControl>
+
           <TextField
             label="Program Code"
             name="programCode"
             value={newAudit.programCode}
-            onChange={handleNewAuditChange}
-            fullWidth
-            required
-          />
-          <TextField
-            label="Financial Year"
-            name="financialYear"
-            value={newAudit.financialYear}
             onChange={handleNewAuditChange}
             fullWidth
             required
@@ -313,32 +326,75 @@ const MoeAudit = () => {
             required
             InputLabelProps={{ shrink: true }}
           />
-          <FormControl fullWidth>
-            <InputLabel>Audit Opinion</InputLabel>
-            <Select
-              name="auditOpinion"
-              value={newAudit.auditOpinion}
-              onChange={handleNewAuditChange}
-              label="Audit Opinion"
-            >
-              <MenuItem value="Unqualified">Unqualified</MenuItem>
-              <MenuItem value="Qualified">Qualified</MenuItem>
-              <MenuItem value="Adverse">Adverse</MenuItem>
-              <MenuItem value="Disclaimer">Disclaimer</MenuItem>
-            </Select>
-          </FormControl>
-          {['Qualified', 'Adverse', 'Disclaimer'].includes(newAudit.auditOpinion) && (
-            <TextField
-              label="Remarks"
-              name="remarks"
-              value={newAudit.remarks}
-              onChange={handleNewAuditChange}
-              fullWidth
-              multiline
-              rows={3}
-              required
-              placeholder="Provide remarks for the selected opinion."
-            />
+
+          {newAudit.type === 'performance' && (
+            <>
+              <TextField
+                label="Efficiency Score (0-100)"
+                name="efficiencyScore"
+                type="number"
+                value={newAudit.efficiencyScore}
+                onChange={handleNewAuditChange}
+                fullWidth
+                required
+              />
+              <FormControl fullWidth>
+                <InputLabel>Effectiveness</InputLabel>
+                <Select
+                  name="effectiveness"
+                  value={newAudit.effectiveness}
+                  onChange={handleNewAuditChange}
+                  label="Effectiveness"
+                >
+                  <MenuItem value="High">High</MenuItem>
+                  <MenuItem value="Medium">Medium</MenuItem>
+                  <MenuItem value="Low">Low</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                label="Recommendations"
+                name="recommendations"
+                value={newAudit.recommendations}
+                onChange={handleNewAuditChange}
+                fullWidth
+                multiline
+                rows={3}
+              />
+            </>
+          )}
+
+          {newAudit.type === 'compliance' && (
+            <>
+              <TextField
+                label="Regulation Area"
+                name="regulation"
+                value={newAudit.regulation}
+                onChange={handleNewAuditChange}
+                fullWidth
+                required
+              />
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  name="status"
+                  value={newAudit.status}
+                  onChange={handleNewAuditChange}
+                  label="Status"
+                >
+                  <MenuItem value="Compliant">Compliant</MenuItem>
+                  <MenuItem value="Non-Compliant">Non-Compliant</MenuItem>
+                </Select>
+              </FormControl>
+              <TextField
+                label="Notes"
+                name="notes"
+                value={newAudit.notes}
+                onChange={handleNewAuditChange}
+                fullWidth
+                multiline
+                rows={3}
+              />
+            </>
           )}
         </DialogContent>
         <DialogActions>

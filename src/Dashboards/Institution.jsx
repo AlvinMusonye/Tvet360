@@ -1,4 +1,14 @@
 import React from 'react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+
+const staffData = [
+  { name: 'PhD', value: 5 },
+  { name: 'Masters', value: 15 },
+  { name: 'Bachelors', value: 45 },
+  { name: 'Diploma', value: 35 },
+];
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const Institution = () => {
   return (
@@ -22,8 +32,27 @@ const Institution = () => {
               <p className="body-large font-bold text-success">65%</p>
             </div>
           </div>
-          <div className="mt-6 h-48 bg-gray-50 rounded flex items-center justify-center border border-border">
-             <p className="body-small">[Staff Pie Chart: Qualification/Terms]</p>
+          <div className="mt-6 h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={staffData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {staffData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
