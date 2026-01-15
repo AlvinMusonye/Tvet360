@@ -304,6 +304,30 @@ const Students = () => {
                           <option value="false">No</option>
                         </select>
                       </div>
+                      <div>
+                        <label className="text-xs text-gray-600">NYS Enrollment</label>
+                        <select name="studentNYSEnrollment" value={filters.studentNYSEnrollment} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">
+                          <option value="all">All</option>
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600">Dual Apprenticeship</label>
+                        <select name="studentDualApprenticeship" value={filters.studentDualApprenticeship} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">
+                          <option value="all">All</option>
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600">RPL Status</label>
+                        <select name="studentRPLStatus" value={filters.studentRPLStatus} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">
+                          <option value="all">All</option>
+                          <option value="true">Yes</option>
+                          <option value="false">No</option>
+                        </select>
+                      </div>
                        <div>
                         <label className="text-xs text-gray-600">Current Status</label>
                         <select name="studentCurrentStatus" value={filters.studentCurrentStatus} onChange={handleFilterChange} className="w-full p-1 border rounded-md text-sm">

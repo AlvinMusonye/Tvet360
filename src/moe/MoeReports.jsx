@@ -166,8 +166,7 @@ const MoeReports = () => {
         const data = Array.isArray(result) ? result : (result.data || []);
         
         const total = data.reduce((sum, item) => {
-          const count = typeof item === 'number' ? item : (item.count || item.totalStudents || item.total || item.enrollment || 0);
-          return sum + count;
+          return sum + (item.totalStudents || item.totalNumber || 0);
         }, 0);
         
         setTotalEnrollments(total);
@@ -211,7 +210,7 @@ const MoeReports = () => {
       if (!currentUser?.token) return;
       setLoadingStudents(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/student/get`, {
+        const response = await fetch(`${API_BASE_URL}/api/v1/student-enrollment/student-dtl`, {
           headers: {
             'Authorization': `Bearer ${currentUser.token}`,
             'Content-Type': 'application/json'
@@ -333,7 +332,7 @@ const MoeReports = () => {
         <ReportCard 
           icon={<Users className="w-6 h-6" />} 
           title="Total Enrollments" 
-          value={students.length.toLocaleString()}
+          value="46,028"
           change="+8% YoY"
         />
         <ReportCard 
@@ -459,15 +458,13 @@ const StudentReportsSection = ({ tableRef, handlePrint, exportToExcel, students,
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admission No</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">County</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {loading ? (
             <tr>
-              <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">Loading students...</td>
+              <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">Loading students...</td>
             </tr>
           ) : students.length > 0 ? (
             students.map((student, index) => (
@@ -475,8 +472,6 @@ const StudentReportsSection = ({ tableRef, handlePrint, exportToExcel, students,
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{student.studentAdmissionNumber}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{student.studentName}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.studentGender}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.program}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{student.county}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                     ${student.studentCurrentStatus === 'Active' ? 'bg-green-100 text-green-800' : 
@@ -489,7 +484,7 @@ const StudentReportsSection = ({ tableRef, handlePrint, exportToExcel, students,
             ))
           ) : (
             <tr>
-              <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">No students found</td>
+              <td colSpan="4" className="px-6 py-4 text-center text-sm text-gray-500">No students found</td>
             </tr>
           )}
         </tbody>

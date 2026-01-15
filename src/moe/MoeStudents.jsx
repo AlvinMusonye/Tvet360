@@ -406,7 +406,6 @@ const MoeStudents = () => {
               <p className="text-sm font-medium text-gray-500">Active Students</p>
               <p className="mt-1 text-3xl font-semibold text-green-600">{activeStudents.toLocaleString()}</p>
               <p className="mt-1 text-sm text-gray-500">
-                {totalStudents > 0 ? ((activeStudents / totalStudents) * 100).toFixed(1) : 0}% of total
               </p>
             </div>
             <div className="p-3 bg-green-100 rounded-full">
@@ -421,7 +420,6 @@ const MoeStudents = () => {
               <p className="text-sm font-medium text-gray-500">Male Students</p>
               <p className="mt-1 text-3xl font-semibold text-blue-600">{maleStudents.toLocaleString()}</p>
               <p className="mt-1 text-sm text-gray-500">
-                {totalStudents > 0 ? ((maleStudents / totalStudents) * 100).toFixed(1) : 0}% of total
               </p>
             </div>
             <div className="p-3 bg-blue-50 rounded-full">
@@ -436,7 +434,6 @@ const MoeStudents = () => {
               <p className="text-sm font-medium text-gray-500">Female Students</p>
               <p className="mt-1 text-3xl font-semibold text-pink-600">{femaleStudents.toLocaleString()}</p>
               <p className="mt-1 text-sm text-gray-500">
-                {totalStudents > 0 ? ((femaleStudents / totalStudents) * 100).toFixed(1) : 0}% of total
               </p>
             </div>
             <div className="p-3 bg-pink-50 rounded-full">
