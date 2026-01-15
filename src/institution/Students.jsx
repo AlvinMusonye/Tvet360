@@ -183,6 +183,16 @@ const Students = () => {
     setShowDetailModal(true);
   };
 
+  const getCalculatedStatus = (student) => {
+    if (!student.studentExpectedCompletionDate) return student.studentCurrentStatus || 'N/A';
+    const completionDate = new Date(student.studentExpectedCompletionDate);
+    const now = new Date();
+    completionDate.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    
+    return completionDate >= now ? 'Active' : 'Inactive';
+  };
+
   // Apply filters and search
   const filteredStudents = useMemo(() => Array.isArray(students) 
     ? students.filter(student => {
@@ -202,8 +212,8 @@ const Students = () => {
           (filters.studentDualApprenticeship === 'all' || String(student.studentDualApprenticeship) === filters.studentDualApprenticeship) &&
           (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus) &&
           (filters.completionStatus === 'all' || 
-            (filters.completionStatus === 'Active' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) >= new Date()) ||
-            (filters.completionStatus === 'Inactive' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) < new Date())
+            (filters.completionStatus === 'Active' && (!student.studentExpectedCompletionDate || new Date(student.studentExpectedCompletionDate).setHours(0,0,0,0) >= new Date().setHours(0,0,0,0))) ||
+            (filters.completionStatus === 'Inactive' && (student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate).setHours(0,0,0,0) < new Date().setHours(0,0,0,0)))
           ) &&
           (filters.ethnicGroupId === '' || String(student.ethnicGroupId) === filters.ethnicGroupId) &&
           (filters.wardId === '' || String(student.wardId) === filters.wardId) &&
@@ -434,7 +444,7 @@ const Students = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admission #</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enrollment Date</th>
                 </tr>
               </thead>
@@ -459,15 +469,7 @@ const Students = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {programMap[student.programCode] || student.programCode || student.program || 'N/A'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        student.studentCurrentStatus === 'Active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {student.studentCurrentStatus}
-                      </span>
-                    </td>
+                  
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {student.studentEnrollmentDate ? formatDate(student.studentEnrollmentDate) : 'N/A'}
                     </td>
