@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Search, Filter, Users, ChevronDown, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -8,6 +8,7 @@ const MoeStudents = () => {
   const { currentUser } = useAuth();
   const [students, setStudents] = useState([]);
   const [institutions, setInstitutions] = useState([]);
+  const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,11 +22,13 @@ const MoeStudents = () => {
     studentNYSEnrollment: 'all',
     studentDualApprenticeship: 'all',
     studentRPLStatus: 'all',
-    institution: 'all'
+    institution: 'all',
+    county: 'all'
   });
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const filterRef = useRef(null);
 
   // Fetch students data
   const fetchStudents = async () => {
@@ -65,9 +68,27 @@ const MoeStudents = () => {
     }
   };
 
+  const fetchPrograms = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/program/get`, {
+        headers: { 'Authorization': `Bearer ${currentUser?.token}` },
+      });
+      const result = await response.json();
+      if (result.status === 200 && Array.isArray(result.data)) {
+        setPrograms(result.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch programs', err);
+    }
+  };
+
   const uniquePrograms = useMemo(() => {
     return [...new Set(students.map(item => item.programCode).filter(Boolean))];
   }, [students]);
+
+  const availableCounties = useMemo(() => {
+    return [...new Set(institutions.map(inst => inst.institutionCounty).filter(Boolean))].sort();
+  }, [institutions]);
 
   // Create a map of institution registration numbers to names
   const institutionMap = useMemo(() => {
@@ -76,6 +97,20 @@ const MoeStudents = () => {
       return acc;
     }, {});
   }, [institutions]);
+
+  const institutionObjectMap = useMemo(() => {
+    return institutions.reduce((acc, inst) => {
+        acc[inst.institutionRegistrationNumber] = inst;
+        return acc;
+    }, {});
+  }, [institutions]);
+
+  const programMap = useMemo(() => {
+    return programs.reduce((acc, prog) => {
+      acc[prog.programCode] = prog.programName;
+      return acc;
+    }, {});
+  }, [programs]);
 
   // Check if any filters are active
   const hasActiveFilters = useMemo(() => {
@@ -91,6 +126,8 @@ const MoeStudents = () => {
           (student.studentAdmissionNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
           (student.studentNumber || '').includes(searchTerm);
         
+        const studentInstitution = institutionObjectMap[student.institutionRegistrationNumber];
+
         const matchesFilters = 
           (filters.programCode === 'all' || student.programCode === filters.programCode) &&
           (filters.studentCurrentStatus === 'all' || student.studentCurrentStatus === filters.studentCurrentStatus) &&
@@ -102,13 +139,13 @@ const MoeStudents = () => {
           (filters.studentDualApprenticeship === 'all' || String(student.studentDualApprenticeship) === filters.studentDualApprenticeship) &&
           (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus) &&
           (filters.institution === 'all' || 
-            (student.institutionName || institutionMap[student.institutionRegistrationNumber] || '').toLowerCase().includes(filters.institution.toLowerCase())
-          );
+            (student.institutionName || institutionMap[student.institutionRegistrationNumber] || '').toLowerCase().includes(filters.institution.toLowerCase())) &&
+          (filters.county === 'all' || (studentInstitution && studentInstitution.institutionCounty === filters.county));
         
         return matchesSearch && matchesFilters;
       })
     : [];
-  }, [students, searchTerm, filters, institutionMap]);
+  }, [students, searchTerm, filters, institutionMap, institutionObjectMap]);
 
   // Calculate summary statistics
   const totalStudents = students.length;
@@ -131,10 +168,10 @@ const MoeStudents = () => {
     }, {});
 
     return Object.entries(groups).map(([key, { total, count }]) => ({
-      name: key,
+      name: programMap[key] || key,
       average: count > 0 ? (total / count).toFixed(1) : 0
     })).sort((a, b) => b.average - a.average);
-  }, [students]);
+  }, [students, programMap]);
 
   // Pagination for programs list
   const [programPage, setProgramPage] = useState(1);
@@ -155,6 +192,21 @@ const MoeStudents = () => {
   useEffect(() => {
     fetchStudents();
     fetchInstitutions();
+    fetchPrograms();
+  }, []);
+
+  // Handle click outside filter to close it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   // Handle filter change
@@ -179,7 +231,8 @@ const MoeStudents = () => {
       studentNYSEnrollment: 'all',
       studentDualApprenticeship: 'all',
       studentRPLStatus: 'all',
-      institution: 'all'
+      institution: 'all',
+      county: 'all'
     });
     setSearchTerm('');
     setCurrentPage(1);
@@ -220,19 +273,22 @@ const MoeStudents = () => {
         </div>
         
         <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
-          {/* Search Bar */}
+          {/* County Filter */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search students..."
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
+            <select
+              name="county"
+              value={filters.county}
+              onChange={handleFilterChange}
+              className="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
+            >
+              <option value="all">All Counties</option>
+              {availableCounties.map(county => (
+                <option key={county} value={county}>{county}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+              <ChevronDown className="h-4 w-4" />
+            </div>
           </div>
 
           {/* Institution Filter */}
@@ -253,7 +309,7 @@ const MoeStudents = () => {
           </div>
 
           {/* Filter Button */}
-          <div className="relative">
+          <div className="relative" ref={filterRef}>
             <button
               onClick={() => setShowFilterDropdown(!showFilterDropdown)}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -280,7 +336,7 @@ const MoeStudents = () => {
                       ))}
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select
@@ -445,7 +501,7 @@ const MoeStudents = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Male Students</p>
+              <p className="text-sm font-medium text-gray-500">Male </p>
               <p className="mt-1 text-3xl font-semibold text-blue-600">{maleStudents.toLocaleString()}</p>
               <p className="mt-1 text-sm text-gray-500">
                 {totalStudents > 0 ? ((maleStudents / totalStudents) * 100).toFixed(1) : 0}%
@@ -460,7 +516,7 @@ const MoeStudents = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Female Students</p>
+              <p className="text-sm font-medium text-gray-500">Female</p>
               <p className="mt-1 text-3xl font-semibold text-pink-600">{femaleStudents.toLocaleString()}</p>
               <p className="mt-1 text-sm text-gray-500">
                 {totalStudents > 0 ? ((femaleStudents / totalStudents) * 100).toFixed(1) : 0}%
