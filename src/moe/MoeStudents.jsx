@@ -64,6 +64,7 @@ const MoeStudents = () => {
       const result = await response.json();
       if (result.status === 200 && Array.isArray(result.data)) {
         setInstitutions(result.data);
+        console.log(result.data);
       }
     } catch (err) {
       console.error('Failed to fetch institutions', err);
@@ -93,7 +94,7 @@ const MoeStudents = () => {
   }, [institutions]);
 
   const uniqueInstitutionTypes = useMemo(() => {
-    return [...new Set(institutions.map(inst => inst.institutionType).filter(Boolean))].sort();
+    return [...new Set(institutions.map(inst => inst.institutionType))].sort();
   }, [institutions]);
 
   // Create a map of institution registration numbers to names
@@ -106,7 +107,12 @@ const MoeStudents = () => {
 
   const institutionObjectMap = useMemo(() => {
     return institutions.reduce((acc, inst) => {
-        acc[inst.institutionRegistrationNumber] = inst;
+        // acc[inst.institutionRegistrationNumber] = inst;
+        acc[inst.institutionName] = inst;
+        console.log("===================================================== Acc: =====================================================");
+        console.log(acc);
+        console.log("===================================================== Inst =====================================================");
+        console.log(inst);
         return acc;
     }, {});
   }, [institutions]);
@@ -134,6 +140,7 @@ const MoeStudents = () => {
 
   // Apply filters and search
   const filteredStudents = useMemo(() => {
+    console.log(students.slice(0,10));
     return Array.isArray(students) 
     ? students.filter(student => {
         const matchesSearch = 
@@ -141,7 +148,11 @@ const MoeStudents = () => {
           (student.studentAdmissionNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
           (student.studentNumber || '').includes(searchTerm);
         
-        const studentInstitution = institutionObjectMap[student.institutionRegistrationNumber];
+        // const studentInstitution = institutionObjectMap[student.institutionRegistrationNumber];
+        const studentInstitution = institutionObjectMap[student.institutionName];
+        // console.log(student.institutionRegistrationNumber);
+        // console.log("===================================== student institution =====================================")
+        // console.log(studentInstitution);
 
         const matchesFilters = 
           (filters.programCode === 'all' || student.programCode === filters.programCode) &&
@@ -218,6 +229,7 @@ const MoeStudents = () => {
     fetchStudents();
     fetchInstitutions();
     fetchPrograms();
+    console.log(institutionMap);
   }, []);
 
   // Handle click outside filter to close it
@@ -237,10 +249,16 @@ const MoeStudents = () => {
   // Handle filter change
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
+    console.log("==================================== Name ================================");
+    console.error(name);
+    console.log("==================================== Value ================================");
+    console.error(value);
     setFilters(prev => ({
       ...prev,
       [name]: value
     }));
+    console.log("================================================= selected instititution ============================================")
+    console.log(filters.institutionType);
     setCurrentPage(1);
   };
 
