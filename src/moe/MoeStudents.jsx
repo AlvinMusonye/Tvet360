@@ -1,10 +1,23 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Search, Filter, Users, ChevronDown, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { fetchInstitutionCounties, fetchInstitutions, fetchInstitutionsByCounty, fetchInstitutionsByType, fetchInstitutionsByTypeAndCounty, fetchInstitutionTypes, fetchProgramsForInstitutions, fetchStudentsForPrograms } from './moe-students/MoeStudentService';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
 
 const MoeStudents = () => {
+  const [counties, setCounties] = useState([]);
+  const [selectedCounty, setSelectedCounty] = useState("All");
+  const [instType, setInstType] = useState([]);
+  const [selectedInstType, setSelectedInstType] = useState("All");
+  const [insts, setInsts] = useState([]);
+  const [selectedInst, setSelectedInst] = useState("All");
+  const [progs, setProgs] = useState([]);
+  const [selectedProg, setSelectedProg] = useState("All");
+  const [studs, setStuds] = useState([]);
+  const [studPageResponse, setStudPageResponse] = useState({});
+  const [serverPageNumber, setServerPageNumber] = useState(0);
+
   const { currentUser } = useAuth();
   const [students, setStudents] = useState([]);
   const [institutions, setInstitutions] = useState([]);
@@ -32,44 +45,122 @@ const MoeStudents = () => {
   const [itemsPerPage] = useState(10);
   const filterRef = useRef(null);
 
-  // Fetch students data
-  const fetchStudents = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await fetch(`${API_BASE_URL}/api/v1/student-enrollment/student-dtl`, {
-        headers: { 'Authorization': `Bearer ${currentUser?.token}` },
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  useEffect(() => {
+    console.log("County: ", selectedCounty);
+    if(selectedInstType.toLowerCase() === "all")
+    {
+      if(selectedCounty.toLowerCase() === "all")
+      {
+        (async () => {let insts = await fetchInstitutions(currentUser?.token); console.log(insts); setInsts(insts); })();
       }
-      const studentData = await response.json();
-      setStudents(Array.isArray(studentData) ? studentData : []);
-      
-    } catch (err) {
-      setError(err.message || 'Failed to fetch students');
-      console.error('Fetch error:', err);
-      setStudents([]);
-    } finally {
-      setLoading(false);
+      else
+      {
+        (async () => {let insts = await fetchInstitutionsByCounty(currentUser?.token, selectedCounty); console.log(insts); setInsts(insts); })();
+      }
     }
-  };
+    else {
+      if(selectedCounty.toLowerCase() === "all")
+      {
+        (async () => {let insts = await fetchInstitutionsByType(currentUser?.token, selectedInstType); console.log(insts); setInsts(insts); })();
+      }
+      else
+      {
+        (async () => {let insts = await fetchInstitutionsByTypeAndCounty(currentUser?.token, selectedInstType, selectedCounty); console.log(insts); setInsts(insts); })();
+      }
+    }
+  }, [selectedCounty, selectedInstType, currentUser]);
 
-  const fetchInstitutions = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/institution/get`, {
-        headers: { 'Authorization': `Bearer ${currentUser?.token}` },
-      });
-      const result = await response.json();
-      if (result.status === 200 && Array.isArray(result.data)) {
-        setInstitutions(result.data);
-        console.log(result.data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch institutions', err);
+  useEffect(() => {
+    console.log("Inst: ", selectedInst)
+    console.log(insts);
+    if( selectedInst.toLowerCase() === "all" )
+    {
+      //load all programs for all insts
+      console.log("getting programs for all insts")
+      console.log(insts);
+      (async () => {let progs = await fetchProgramsForInstitutions(currentUser?.token, [...insts]); console.log(progs); setProgs(progs)})();
     }
-  };
+    else
+    {
+      //load only programs for the selected inst
+      console.log("getting programs for selected institution")
+      console.log(selectedInst);
+      console.log(insts.find(inst => inst.institutionName.equals(selectedInst)));
+      (async () => {let progs = await fetchProgramsForInstitutions(currentUser?.token, [...insts.find(inst => inst.institutionName.toLowerCase() === selectedInst.toLowerCase())]); console.log(progs); setProgs(progs)})();
+    }
+  }, [selectedInst, insts, currentUser]);
+
+
+useEffect(() => {
+  (async () => {setLoading(true)})();
+  console.log("Selected prog");
+  console.log(selectedProg);
+  if(selectedProg.toLowerCase() === "all")
+  {
+    //load all students
+    console.log("loading all students ");
+    console.log(selectedProg);
+    console.log(progs);
+    (async () => {
+      let pageResponse = await fetchStudentsForPrograms(currentUser?.token, [...progs], serverPageNumber);
+      console.log(pageResponse); 
+      setStudPageResponse(pageResponse);
+      setStuds(pageResponse.data);
+    })();
+  }
+  else
+  {
+    //load students enrolled in selected program
+    console.log("loading students of selected program");
+    console.log(selectedProg);
+    (async () => {
+      let pageResponse = await fetchStudentsForPrograms(currentUser?.token, [...(progs.find(prog => prog.programCode.toLowerCase() === selectedProg.toLowerCase()))], serverPageNumber);
+      console.log(pageResponse); 
+      setStudPageResponse(pageResponse);
+      setStuds(pageResponse.data);
+    })();
+  }
+  (async () => {setLoading(false)})();
+}, [progs, selectedProg, serverPageNumber, currentUser]);
+
+
+  // Fetch students data
+  // const fetchStudents = async () => {
+  //   try {
+  //     setLoading(true);
+  //     setError(null);
+  //     const response = await fetch(`${API_BASE_URL}/api/v1/student-enrollment/student-dtl`, {
+  //       headers: { 'Authorization': `Bearer ${currentUser?.token}` },
+  //     });
+  //     if (!response.ok) {
+  //       throw new Error(`HTTP error! status: ${response.status}`);
+  //     }
+  //     const studentData = await response.json();
+  //     setStudents(Array.isArray(studentData) ? studentData : []);
+      
+  //   } catch (err) {
+  //     setError(err.message || 'Failed to fetch students');
+  //     console.error('Fetch error:', err);
+  //     setStudents([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // const fetchInstitutions = async () => {
+  //   try {
+  //     const response = await fetch(`${API_BASE_URL}/api/v1/institution/get`, {
+  //       headers: { 'Authorization': `Bearer ${currentUser?.token}` },
+  //     });
+  //     const result = await response.json();
+  //     if (result.status === 200 && Array.isArray(result.data)) {
+  //       setInstitutions(result.data);
+  //       console.log(result.data);
+  //     }
+  //   } catch (err) {
+  //     console.error('Failed to fetch institutions', err);
+  //   }
+  // };
 
   const fetchPrograms = async () => {
     try {
@@ -90,12 +181,10 @@ const MoeStudents = () => {
   }, [students]);
 
   const availableCounties = useMemo(() => {
-    return [...new Set(institutions.map(inst => inst.institutionCounty).filter(Boolean))].sort();
-  }, [institutions]);
+    return [...counties];
+  }, [counties]
+);
 
-  const uniqueInstitutionTypes = useMemo(() => {
-    return [...new Set(institutions.map(inst => inst.institutionType))].sort();
-  }, [institutions]);
 
   // Create a map of institution registration numbers to names
   const institutionMap = useMemo(() => {
@@ -140,22 +229,23 @@ const MoeStudents = () => {
 
   // Apply filters and search
   const filteredStudents = useMemo(() => {
-    console.log(students.slice(0,10));
-    return Array.isArray(students) 
-    ? students.filter(student => {
+    console.warn("============================= Students ===============================");
+    console.log(studs);
+    return Array.isArray(studs) 
+    ? studs.filter(student => {
         const matchesSearch = 
           (student.studentName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
           (student.studentAdmissionNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
           (student.studentNumber || '').includes(searchTerm);
         
         // const studentInstitution = institutionObjectMap[student.institutionRegistrationNumber];
-        const studentInstitution = institutionObjectMap[student.institutionName];
+        // const studentInstitution = institutionObjectMap[student.institutionName];
         // console.log(student.institutionRegistrationNumber);
         // console.log("===================================== student institution =====================================")
         // console.log(studentInstitution);
 
         const matchesFilters = 
-          (filters.programCode === 'all' || student.programCode === filters.programCode) &&
+          // (filters.programCode === 'all' || student.programCode === filters.programCode) &&
           (filters.studentReportingStatus === 'all' || student.studentReportingStatus === filters.studentReportingStatus) &&
           (filters.studentGender === 'all' || (student.studentGender?.toLowerCase() === filters.studentGender.toLowerCase())) &&
           (filters.studentSocioEconomicStatus === 'all' || student.studentSocioEconomicStatus === filters.studentSocioEconomicStatus) &&
@@ -164,10 +254,10 @@ const MoeStudents = () => {
           (filters.studentNYSEnrollment === 'all' || String(student.studentNYSEnrollment) === filters.studentNYSEnrollment) &&
           (filters.studentDualApprenticeship === 'all' || String(student.studentDualApprenticeship) === filters.studentDualApprenticeship) &&
           (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus) &&
-          (filters.institution === 'all' || 
-            (student.institutionName || institutionMap[student.institutionRegistrationNumber] || '').toLowerCase().includes(filters.institution.toLowerCase())) &&
-          (filters.county === 'all' || (student.institutionCounty === filters.county) || (studentInstitution && studentInstitution.institutionCounty === filters.county)) &&
-          (filters.institutionType === 'all' || (studentInstitution && studentInstitution.institutionType === filters.institutionType)) &&
+          // (filters.institution === 'all' || 
+          //   (student.institutionName || institutionMap[student.institutionRegistrationNumber] || '').toLowerCase().includes(filters.institution.toLowerCase())) &&
+          // (filters.county === 'all' || (student.institutionCounty === filters.county) || (studentInstitution && studentInstitution.institutionCounty === filters.county)) &&
+          // (filters.institutionType === 'all' || (studentInstitution && studentInstitution.institutionType === filters.institutionType)) &&
           (filters.completionStatus === 'all' || 
             (filters.completionStatus === 'Active' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) >= new Date()) ||
             (filters.completionStatus === 'Inactive' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) < new Date())
@@ -176,11 +266,22 @@ const MoeStudents = () => {
         return matchesSearch && matchesFilters;
       })
     : [];
-  }, [students, searchTerm, filters, institutionMap, institutionObjectMap]);
+  }, [studs, searchTerm, filters]);
+
+  // const uniqueProgramsForFilteredStudents = useMemo(() => {
+  //   return [...new Set(filteredStudents.map(item => item.programCode).filter(Boolean))];
+  // }, [filteredStudents]);
+
+  // const filteredProgramMap = useMemo(() => {
+  //   return uniqueProgramsForFilteredStudents.reduce((acc, prog) => {
+  //     acc[prog.programCode] = prog.programName;
+  //     return acc;
+  //   }, {});
+  // }, [uniqueProgramsForFilteredStudents]);
 
   // Calculate summary statistics
-  const totalStudents = students.length;
-  const activeStudentsList = useMemo(() => filteredStudents.filter(s => getCalculatedStatus(s) === 'Active'), [filteredStudents]);
+  const totalStudents = studPageResponse.totalElements;//filteredStudents.length;//students.length;
+  const activeStudentsList = useMemo(() => studs.filter(s => getCalculatedStatus(s) === 'Active'), [studs]);
   const activeStudents = activeStudentsList.length;
   const activeMaleStudents = activeStudentsList.filter(s => s.studentGender?.toLowerCase() === 'male').length;
   const activeFemaleStudents = activeStudentsList.filter(s => s.studentGender?.toLowerCase() === 'female').length;
@@ -221,14 +322,18 @@ const MoeStudents = () => {
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredStudents.length / itemsPerPage);
+  const currentStudents = studs.slice(indexOfFirstItem % 100, (indexOfLastItem % 100 === 0 ? 100 : indexOfLastItem % 100));//studs.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(studPageResponse.totalElements / itemsPerPage);
 
   // Fetch data on component mount
   useEffect(() => {
-    fetchStudents();
-    fetchInstitutions();
-    fetchPrograms();
+    // fetchStudents();
+    // fetchInstitutions();
+    // fetchPrograms();
+    
+    (async () => {let insts = await fetchInstitutions(currentUser?.token); console.log(insts);setInstitutions(insts);})();
+    (async () => {let cnts = await fetchInstitutionCounties(currentUser?.token); console.log(cnts);setCounties(cnts);})();
+    (async () => {let types = await fetchInstitutionTypes(currentUser?.token); console.log(types);setInstType(types);})();
     console.log(institutionMap);
   }, []);
 
@@ -281,7 +386,7 @@ const MoeStudents = () => {
     });
     setSearchTerm('');
     setCurrentPage(1);
-    fetchStudents(); // Reset to show all students
+    // fetchStudents(); // Reset to show all students
   };
 
   if (loading) {
@@ -322,13 +427,17 @@ const MoeStudents = () => {
           <div className="relative">
             <select
               name="institutionType"
-              value={filters.institutionType}
-              onChange={handleFilterChange}
+              onChange={event => {
+                let newValue = event.target?.value;
+                console.log(newValue);
+                setSelectedInstType(newValue);
+                // handleFilterChange(event);
+              }}
               className="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
             >
               <option value="all">All Types</option>
-              {uniqueInstitutionTypes.map(type => (
-                <option key={type} value={type}>{type}</option>
+              {instType.map(type => (
+                <option key={type} value={type}>{type.replaceAll("_", " ")}</option>
               ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
@@ -340,8 +449,13 @@ const MoeStudents = () => {
           <div className="relative">
             <select
               name="county"
-              value={filters.county}
-              onChange={handleFilterChange}
+              
+              onChange={event => {
+                let newValue = event.target?.value;
+                console.log(newValue);
+                setSelectedCounty(newValue);
+                // handleFilterChange(event);
+              }}
               className="w-full pl-4 pr-8 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
             >
               <option value="all">All Counties</option>
@@ -362,11 +476,18 @@ const MoeStudents = () => {
               name="institution"
               placeholder="Filter by Institution..."
               className="w-full pl-4 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              onChange={(e) => handleFilterChange({ target: { name: 'institution', value: e.target.value || 'all' } })}
+              onChange={
+              event => {
+                let newValue = event.target?.value;
+                setSelectedInst(newValue);
+                // handleFilterChange(event);
+              }
+                // (e) => handleFilterChange({ target: { name: 'institution', value: e.target.value || 'all' } })
+            }
             />
             <datalist id="institutions-list">
-              {institutions.map((inst) => (
-                <option key={inst.institutionRegistrationNumber} value={inst.institutionName} />
+              {insts.map((inst) => (
+                <option key={inst.institutionRegistrationNumber} value={inst.institutionName}/>
               ))}
             </datalist>
           </div>
@@ -389,14 +510,19 @@ const MoeStudents = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
                     <select
                       name="programCode"
-                      value={filters.programCode}
-                      onChange={handleFilterChange}
+                      // value={filters.programCode}
+                      onChange={event => {
+                        let newVal = event.target?.value;
+                        console.log(newVal);
+                        setSelectedProg(newVal);
+                      }}
                       className="w-full p-2 border rounded-md"
                     >
                       <option value="all">All Programs</option>
-                      {uniquePrograms.map(programCode => (
-                        <option key={programCode} value={programCode}>
-                          {programMap[programCode] || programCode}
+                      {progs.map(prog => (
+                      // {uniquePrograms.map(programCode => (
+                        <option key={prog.programCode} value={prog.programCode}>
+                          {prog.programName/* {filteredProgramMap[programCode] || programCode} */}
                         </option>
                       ))}
                     </select>
@@ -552,7 +678,7 @@ const MoeStudents = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Total </p>
-              <p className="mt-1 text-3xl font-semibold text-gray-900">{totalStudents.toLocaleString()}</p>
+              <p className="mt-1 text-3xl font-semibold text-gray-900">{`${totalStudents}`}</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-full">
               <Users className="h-6 w-6 text-blue-600" />
@@ -608,7 +734,7 @@ const MoeStudents = () => {
 
       {/* Attendance Metrics Section */}
       <div className="mb-8 transition-all duration-300 ease-in-out">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Overall Attendance by Program</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Total students by Program</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6">
           {/* Attendance by Program */}
@@ -731,14 +857,34 @@ const MoeStudents = () => {
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{filteredStudents.length > 0 ? indexOfFirstItem + 1 : 0}</span> to <span className="font-medium">{Math.min(indexOfLastItem, filteredStudents.length)}</span> of{' '}
-                <span className="font-medium">{filteredStudents.length}</span> results
+                Showing <span className="font-medium">{studs.length > 0 ? indexOfFirstItem + 1 : 0}</span> to <span className="font-medium">{Math.min(indexOfLastItem, studPageResponse.totalElements)}</span> of{' '}
+                <span className="font-medium">{studPageResponse.totalElements}</span> results
               </p>
             </div>
             <div>
               <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() => {
+                    setCurrentPage(prev => Math.max(prev - 1, 1));
+                    console.log("Current Page: ", currentPage);
+                    if(((currentPage-2) * itemsPerPage) >= (studPageResponse.size * (studPageResponse.page)))
+                    {
+                      console.log("not on prev data page. Continue scrolling for more data");
+                    }
+                    else
+                    {
+                      console.log("On prev data page");
+                      //logic to fetch prev page from server
+                      if(studPageResponse.page === 0 )
+                      {
+                        console.warn("On first page, can not fetch previous page");
+                      }
+                      else{
+                        console.info("Fetching new data page: ", studPageResponse.page - 1);
+                        setServerPageNumber(studPageResponse.page - 1);
+                      }
+                    }
+                  }}
                   disabled={currentPage === 1}
                   className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                 >
@@ -749,7 +895,27 @@ const MoeStudents = () => {
                   Page {currentPage} of {totalPages || 1}
                 </span>
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  onClick={() => {
+                    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+                    console.log("Current Page: ", currentPage);
+                    if((currentPage * itemsPerPage) < (studPageResponse.size * (studPageResponse.page + 1)))
+                    {
+                      console.log("not on next data page. Continue scrolling for more data");
+                    }
+                    else
+                    {
+                      console.log("On next data page");
+                      //logic to fetch next page from server
+                      if((studPageResponse.page + 1) === studPageResponse.totalPages )
+                      {
+                        console.warn("On last page, can not fetch next page");
+                      }
+                      else{
+                        console.info("Fetching new data page: ", studPageResponse.page + 1);
+                        setServerPageNumber(studPageResponse.page + 1);
+                      }
+                    }
+                  }}
                   disabled={currentPage === totalPages || totalPages === 0}
                   className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                 >
