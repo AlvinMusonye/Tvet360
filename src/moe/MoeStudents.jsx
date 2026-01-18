@@ -85,8 +85,8 @@ const MoeStudents = () => {
       //load only programs for the selected inst
       console.log("getting programs for selected institution")
       console.log(selectedInst);
-      console.log(insts.find(inst => inst.institutionName.equals(selectedInst)));
-      (async () => {let progs = await fetchProgramsForInstitutions(currentUser?.token, [...insts.find(inst => inst.institutionName.toLowerCase() === selectedInst.toLowerCase())]); console.log(progs); setProgs(progs)})();
+      console.log(insts.find(inst => inst.institutionName.toLowerCase() === selectedInst.toLocaleLowerCase()));
+      (async () => {let progs = await fetchProgramsForInstitutions(currentUser?.token, [...(insts.find(inst => inst.institutionName.toLowerCase() === selectedInst.toLowerCase()))]); console.log(progs); setProgs(progs)})();
     }
   }, [selectedInst, insts, currentUser]);
 
@@ -114,7 +114,8 @@ useEffect(() => {
     console.log("loading students of selected program");
     console.log(selectedProg);
     (async () => {
-      let pageResponse = await fetchStudentsForPrograms(currentUser?.token, [...(progs.find(prog => prog.programCode.toLowerCase() === selectedProg.toLowerCase()))], serverPageNumber);
+      console.log(progs);
+      let pageResponse = await fetchStudentsForPrograms(currentUser?.token, [{"programCode": selectedProg, programName: selectedProg}], serverPageNumber);
       console.log(pageResponse); 
       setStudPageResponse(pageResponse);
       setStuds(pageResponse.data);
@@ -281,43 +282,44 @@ useEffect(() => {
 
   // Calculate summary statistics
   const totalStudents = studPageResponse.totalElements;//filteredStudents.length;//students.length;
-  const activeStudentsList = useMemo(() => studs.filter(s => getCalculatedStatus(s) === 'Active'), [studs]);
-  const activeStudents = activeStudentsList.length;
-  const activeMaleStudents = activeStudentsList.filter(s => s.studentGender?.toLowerCase() === 'male').length;
-  const activeFemaleStudents = activeStudentsList.filter(s => s.studentGender?.toLowerCase() === 'female').length;
+  // const activeStudentsList = useMemo(() => studs.filter(s => getCalculatedStatus(s) === 'Active'), [studs]);
+  const activeStudents = studPageResponse.totalActiveStudents;//activeStudentsList.length;
+  const activeMaleStudents = studPageResponse.totalActiveMaleStudents;//activeStudentsList.filter(s => s.studentGender?.toLowerCase() === 'male').length;
+  const activeFemaleStudents = studPageResponse.totalActiveFemaleStudents;//activeStudentsList.filter(s => s.studentGender?.toLowerCase() === 'female').length;
 
-  // Calculate average attendance metrics
-  const attendanceByProgram = useMemo(() => {
-    const groupByKey = 'programCode';
-    const groups = activeStudentsList.reduce((acc, student) => {
-      const key = student[groupByKey] || 'Unknown';
-      if (!acc[key]) {
-        acc[key] = { total: 0, count: 0 };
-      }
-      const attendance = (student.studentAttendanceRate || 0) * 100;
-      acc[key].total += attendance;
-      acc[key].count += 1;
-      return acc;
-    }, {});
+  // // Calculate average attendance metrics
+  // const attendanceByProgram = useMemo(() => {
+  //   const groupByKey = 'programCode';
+  //   const groups = activeStudentsList.reduce((acc, student) => {
+  //     const key = student[groupByKey] || 'Unknown';
+  //     if (!acc[key]) {
+  //       acc[key] = { total: 0, count: 0 };
+  //     }
+  //     const attendance = (student.studentAttendanceRate || 0) * 100;
+  //     acc[key].total += attendance;
+  //     acc[key].count += 1;
+  //     return acc;
+  //   }, {});
 
-    const totalActive = activeStudentsList.length;
+  //   const totalActive = activeStudentsList.length;
 
-    return Object.entries(groups).map(([key, { total, count }]) => ({
-      name: programMap[key] || key,
-      average: count > 0 ? (total / count).toFixed(1) : 0,
-      count,
-      share: totalActive > 0 ? ((count / totalActive) * 100).toFixed(1) : 0
-    })).sort((a, b) => b.count - a.count);
-  }, [activeStudentsList, programMap]);
+  //   // return Object.entries(groups).map(([key, { total, count }]) => ({
+  // return Object.entries(groups).map(([key, { total, count }]) => ({
+  //     name: programMap[key] || key,
+  //     average: count > 0 ? (total / count).toFixed(1) : 0,
+  //     count,
+  //     share: totalActive > 0 ? ((count / totalActive) * 100).toFixed(1) : 0
+  //   })).sort((a, b) => b.count - a.count);
+  // }, [activeStudentsList, programMap]);
 
   // Pagination for programs list
   const [programPage, setProgramPage] = useState(1);
   const programsPerPage = 10;
   const currentPrograms = useMemo(() => {
     const start = (programPage - 1) * programsPerPage;
-    return attendanceByProgram.slice(start, start + programsPerPage);
-  }, [attendanceByProgram, programPage]);
-  const totalProgramPages = Math.ceil(attendanceByProgram.length / programsPerPage);
+    return progs.slice(start, start + programsPerPage);
+  }, [progs, programPage]);
+  const totalProgramPages = Math.ceil(progs.length / programsPerPage);
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -510,7 +512,7 @@ useEffect(() => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
                     <select
                       name="programCode"
-                      // value={filters.programCode}
+                      value={selectedProg}
                       onChange={event => {
                         let newVal = event.target?.value;
                         console.log(newVal);
@@ -690,7 +692,7 @@ useEffect(() => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Active Students</p>
-              <p className="mt-1 text-3xl font-semibold text-green-600">{activeStudents.toLocaleString()}</p>
+              <p className="mt-1 text-3xl font-semibold text-green-600">{`${activeStudents}`}</p>
               <p className="mt-1 text-sm text-gray-500">
                 {totalStudents > 0 ? ((activeStudents / totalStudents) * 100).toFixed(1) : 0}% of Total
               </p>
@@ -705,7 +707,7 @@ useEffect(() => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Active Male</p>
-              <p className="mt-1 text-3xl font-semibold text-blue-600">{activeMaleStudents.toLocaleString()}</p>
+              <p className="mt-1 text-3xl font-semibold text-blue-600">{`${activeMaleStudents}`}</p>
               <p className="mt-1 text-sm text-gray-500">
                 {activeStudents > 0 ? ((activeMaleStudents / activeStudents) * 100).toFixed(1) : 0}% of Active
               </p>
@@ -720,7 +722,7 @@ useEffect(() => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Active Female</p>
-              <p className="mt-1 text-3xl font-semibold text-pink-600">{activeFemaleStudents.toLocaleString()}</p>
+              <p className="mt-1 text-3xl font-semibold text-pink-600">{`${activeFemaleStudents}`}</p>
               <p className="mt-1 text-sm text-gray-500">
                 {activeStudents > 0 ? ((activeFemaleStudents / activeStudents) * 100).toFixed(1) : 0}% of Active
               </p>
@@ -741,13 +743,13 @@ useEffect(() => {
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-medium text-gray-800 mb-4">By Program</h3>
             <div className="space-y-3 max-h-60 overflow-y-auto">
-              {attendanceByProgram.length > 0 ? (
+              {progs.length > 0 ? (
                 currentPrograms.map((item, index) => (
                   <div key={index} className="flex justify-between items-center border-b border-gray-100 pb-2 last:border-0 last:pb-0">
-                    <span className="text-sm font-medium text-gray-700 truncate">{item.name || 'N/A'}</span>
+                    <span className="text-sm font-medium text-gray-700 truncate">{item.programName || 'N/A'}</span>
                     <div className="text-right">
-                      <span className="text-sm font-semibold text-blue-600">{item.share}%</span>
-                      <p className="text-xs text-gray-500">{item.count} Students</p>
+                      <span className="text-sm font-semibold text-blue-600">{((item.totalActiveStudentCount / item.totalStudentCount) * 100).toFixed(1)}%</span>
+                      <p className="text-xs text-gray-500">{item.totalStudentCount} Students</p>
                     </div>
                   </div>
                 ))
@@ -755,7 +757,7 @@ useEffect(() => {
                 <p className="text-sm text-gray-500">No attendance data available</p>
               )}
             </div>
-            {attendanceByProgram.length > programsPerPage && (
+            {progs.length > programsPerPage && (
               <div className="flex items-center justify-between mt-4 pt-2 border-t border-gray-100">
                 <button
                   onClick={() => setProgramPage(prev => Math.max(prev - 1, 1))}
@@ -818,7 +820,7 @@ useEffect(() => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {student.institutionName || 'N/A'}
+                        { insts.find(inst => inst.institutionRegistrationNumber === progs.find(prog => prog.programCode === student.programCode).institutionRegistrationNumber).institutionName || student.institutionName || 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -836,7 +838,8 @@ useEffect(() => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {programMap[student.programCode] || student.programCode || 'N/A'}
+                        {/* {programMap[student.programCode] || student.programCode || 'N/A'} */}
+                        {progs.find(prog => prog.programCode === student.programCode).programName || student.programCode || 'N/A'}
                       </div>
                     </td>
                   </tr>
