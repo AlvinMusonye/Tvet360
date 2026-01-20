@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Search, Filter, Users, ChevronDown, Download, ChevronLeft, ChevronRight } from 'lucide-react';
-import { fetchInstitutionCounties, fetchInstitutions, fetchInstitutionsByCounty, fetchInstitutionsByType, fetchInstitutionsByTypeAndCounty, fetchInstitutionTypes, fetchProgramsForInstitutions, fetchStudentsForPrograms } from './moe-students/MoeStudentService';
+import { fetchFilteredStudentsForPrograms, fetchInstitutionCounties, fetchInstitutions, fetchInstitutionsByCounty, fetchInstitutionsByType, fetchInstitutionsByTypeAndCounty, fetchInstitutionTypes, fetchProgramsForInstitutions, fetchStudentsForPrograms } from './moe-students/MoeStudentService';
+import GenderStackedBarChart from './StackedGenderBarCharts';
+import SocioEconomicStackedBarChart from './StackedSocioEconomicBarCharts';
+import AgeStackedBarCharts from './StackedAgeBarCharts';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
 
@@ -17,6 +20,17 @@ const MoeStudents = () => {
   const [studs, setStuds] = useState([]);
   const [studPageResponse, setStudPageResponse] = useState({});
   const [serverPageNumber, setServerPageNumber] = useState(0);
+// Filter states
+  const [gender, setGender] = useState("ALL");
+  const [active, setActive] = useState("ALL");
+  const [reported, setReported] = useState("ALL");
+  const [socioEconomic, setSocioEconomic] = useState("ALL");
+  const [disability, setDisability] = useState("ALL");
+  const [ruralLearner, setRuralLearner] = useState("ALL");
+  const [nys, setNys] = useState("ALL");
+  const [dualApp, setDualApp] = useState("ALL");
+  const [rpl, setRpl] = useState("ALL");
+
 
   const { currentUser } = useAuth();
   const [students, setStudents] = useState([]);
@@ -73,7 +87,7 @@ const MoeStudents = () => {
   useEffect(() => {
     console.log("Inst: ", selectedInst)
     console.log(insts);
-    if( selectedInst.toLowerCase() === "all" )
+    if( selectedInst.toLowerCase() === "all" || selectedInst.toLowerCase() === "" )
     {
       //load all programs for all insts
       console.log("getting programs for all insts")
@@ -85,6 +99,7 @@ const MoeStudents = () => {
       //load only programs for the selected inst
       console.log("getting programs for selected institution")
       console.log(selectedInst);
+      console.log(insts);
       console.log(insts.find(inst => inst.institutionName.toLowerCase() === selectedInst.toLocaleLowerCase()));
       (async () => {let progs = await fetchProgramsForInstitutions(currentUser?.token, [...(insts.find(inst => inst.institutionName.toLowerCase() === selectedInst.toLowerCase()))]); console.log(progs); setProgs(progs)})();
     }
@@ -123,6 +138,24 @@ useEffect(() => {
   }
   (async () => {setLoading(false)})();
 }, [progs, selectedProg, serverPageNumber, currentUser]);
+
+
+useEffect(() => {
+  let params = {
+    "gender": gender,
+    "active": active,
+    "reported": reported,
+    "socioEconomic": socioEconomic,
+    "disability": disability,
+    "ruralLearner": ruralLearner,
+    "nys": nys,
+    "dualApp": dualApp,
+    "rpl": rpl
+  };
+
+  console.log(params);
+  (async () => {let pageResponse = await fetchFilteredStudentsForPrograms(currentUser?.token, progs, serverPageNumber, params); console.log(pageResponse); setStuds(pageResponse.data);})();
+}, [gender, active, reported, socioEconomic, disability, ruralLearner, nys, dualApp, rpl, currentUser?.token, progs, serverPageNumber]);
 
 
   // Fetch students data
@@ -316,9 +349,17 @@ useEffect(() => {
   const [programPage, setProgramPage] = useState(1);
   const programsPerPage = 10;
   const currentPrograms = useMemo(() => {
-    const start = (programPage - 1) * programsPerPage;
-    return progs.slice(start, start + programsPerPage);
-  }, [progs, programPage]);
+
+    if(selectedProg.toLowerCase() === "all" || selectedProg.toLowerCase() === "")
+    {
+      const start = (programPage - 1) * programsPerPage;
+      return progs.slice(start, start + programsPerPage);
+    }
+    else
+    {
+      return [progs.find(prog => prog.programCode.toLowerCase() === selectedProg.toLowerCase())];
+    }
+  }, [progs, programPage, selectedProg]);
   const totalProgramPages = Math.ceil(progs.length / programsPerPage);
 
   // Pagination logic
@@ -534,13 +575,17 @@ useEffect(() => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Active Status</label>
                     <select
                       name="completionStatus"
-                      value={filters.completionStatus}
-                      onChange={handleFilterChange}
+                      value={active}
+                      onChange={(event => {
+                        let newVal = event.target?.value;
+                        console.log(newVal);
+                        setActive(newVal);
+                      })}
                       className="w-full p-2 border rounded-md"
                     >
-                      <option value="all">All</option>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
+                      <option value="ALL">All</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
                     </select>
                   </div>
 
@@ -548,11 +593,15 @@ useEffect(() => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                     <select
                       name="studentReportingStatus"
-                      value={filters.studentReportingStatus}
-                      onChange={handleFilterChange}
+                      value={reported}
+                      onChange={event => {
+                        let newVal = event.target?.value;
+                        console.log(newVal);
+                        setReported(newVal);
+                      }}
                       className="w-full p-2 border rounded-md"
                     >
-                      <option value="all">All Statuses</option>
+                      <option value="ALL">All Statuses</option>
                       <option value="REPORTED">Reported</option>
                       <option value="NOT_REPORTED">Not Reported</option>
                     </select>
@@ -562,14 +611,18 @@ useEffect(() => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
                     <select
                       name="studentGender"
-                      value={filters.studentGender}
-                      onChange={handleFilterChange}
+                      value={gender}
+                      onChange={event => {
+                        let newVal = event.target?.value;
+                        console.log(newVal);
+                        setGender(newVal);
+                      }}
                       className="w-full p-2 border rounded-md"
                     >
-                      <option value="all">All Genders</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
+                      <option value="ALL">All Genders</option>
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                      <option value="OTHER">Other</option>
                     </select>
                   </div>
 
@@ -577,14 +630,18 @@ useEffect(() => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Socio-Economic Status</label>
                     <select
                       name="studentSocioEconomicStatus"
-                      value={filters.studentSocioEconomicStatus}
-                      onChange={handleFilterChange}
+                      value={socioEconomic}
+                      onChange={event => {
+                        let newVal = event.target?.value;
+                        console.log(newVal);
+                        setSocioEconomic(newVal);
+                      }}
                       className="w-full p-2 border rounded-md"
                     >
-                      <option value="all">All</option>
-                      <option value="Low Income">Low Income</option>
-                      <option value="Middle Income">Middle Income</option>
-                      <option value="High Income">High Income</option>
+                      <option value="ALL">All</option>
+                      <option value="LOW_INCOME">Low Income</option>
+                      <option value="MIDDLE_INCOME">Middle Income</option>
+                      <option value="HIGH_INCOME">High Income</option>
                     </select>
                   </div>
 
@@ -592,13 +649,17 @@ useEffect(() => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Disability Status</label>
                     <select
                       name="studentDisabilityStatus"
-                      value={filters.studentDisabilityStatus}
-                      onChange={handleFilterChange}
+                      value={disability}
+                      onChange={event => {
+                        let newVal = event.target?.value;
+                        console.log(newVal);
+                        setDisability(newVal)
+                      }}
                       className="w-full p-2 border rounded-md"
                     >
-                      <option value="all">All</option>
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
+                      <option value="ALL">All</option>
+                      <option value="TRUE">Yes</option>
+                      <option value="FALSE">No</option>
                     </select>
                   </div>
 
@@ -606,13 +667,17 @@ useEffect(() => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Rural Learner</label>
                     <select
                       name="studentRuralLearner"
-                      value={filters.studentRuralLearner}
-                      onChange={handleFilterChange}
+                      value={ruralLearner}
+                      onChange={event => {
+                        let newVal = event.target?.value;
+                        console.log(newVal);
+                        setRuralLearner(newVal);
+                      }}
                       className="w-full p-2 border rounded-md"
                     >
-                      <option value="all">All</option>
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
+                      <option value="ALL">All</option>
+                      <option value="TRUE">Yes</option>
+                      <option value="FALSE">No</option>
                     </select>
                   </div>
 
@@ -620,13 +685,17 @@ useEffect(() => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">NYS Enrollment</label>
                     <select
                       name="studentNYSEnrollment"
-                      value={filters.studentNYSEnrollment}
-                      onChange={handleFilterChange}
+                      value={nys}
+                      onChange={event => {
+                        let newVal = event.target?.value;
+                        console.log(newVal);
+                        setNys(newVal);
+                      }}
                       className="w-full p-2 border rounded-md"
                     >
-                      <option value="all">All</option>
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
+                      <option value="ALL">All</option>
+                      <option value="TRUE">Yes</option>
+                      <option value="FALSE">No</option>
                     </select>
                   </div>
 
@@ -634,13 +703,17 @@ useEffect(() => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Dual Apprenticeship</label>
                     <select
                       name="studentDualApprenticeship"
-                      value={filters.studentDualApprenticeship}
-                      onChange={handleFilterChange}
+                      value={dualApp}
+                      onChange={event => {
+                        let newVal = event.target?.value;
+                        console.log(newVal);
+                        setDualApp(newVal);
+                      }}
                       className="w-full p-2 border rounded-md"
                     >
-                      <option value="all">All</option>
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
+                      <option value="ALL">All</option>
+                      <option value="TRUE">Yes</option>
+                      <option value="FALSE">No</option>
                     </select>
                   </div>
 
@@ -648,13 +721,17 @@ useEffect(() => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">RPL Status</label>
                     <select
                       name="studentRPLStatus"
-                      value={filters.studentRPLStatus}
-                      onChange={handleFilterChange}
+                      value={rpl}
+                      onChange={event => {
+                        let newVal = event.target?.value;
+                        console.log(newVal);
+                        setRpl(newVal);
+                      }}
                       className="w-full p-2 border rounded-md"
                     >
-                      <option value="all">All</option>
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
+                      <option value="ALL">All</option>
+                      <option value="TRUE">Yes</option>
+                      <option value="FALSE">No</option>
                     </select>
                   </div>
 
@@ -757,7 +834,7 @@ useEffect(() => {
                 <p className="text-sm text-gray-500">No attendance data available</p>
               )}
             </div>
-            {progs.length > programsPerPage && (
+            {(progs.length > programsPerPage && (selectedProg.toLowerCase() === "all" || selectedProg.toLowerCase() === "")) && (
               <div className="flex items-center justify-between mt-4 pt-2 border-t border-gray-100">
                 <button
                   onClick={() => setProgramPage(prev => Math.max(prev - 1, 1))}
@@ -820,7 +897,7 @@ useEffect(() => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        { insts.find(inst => inst.institutionRegistrationNumber === progs.find(prog => prog.programCode === student.programCode).institutionRegistrationNumber).institutionName || student.institutionName || 'N/A'}
+                        { insts.find(inst => inst.institutionRegistrationNumber === progs.find(prog => prog.programCode === student.programCode)?.institutionRegistrationNumber)?.institutionName || student.institutionName || 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -839,7 +916,7 @@ useEffect(() => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
                         {/* {programMap[student.programCode] || student.programCode || 'N/A'} */}
-                        {progs.find(prog => prog.programCode === student.programCode).programName || student.programCode || 'N/A'}
+                        {progs.find(prog => prog.programCode === student.programCode)?.programName || student.programCode || 'N/A'}
                       </div>
                     </td>
                   </tr>
