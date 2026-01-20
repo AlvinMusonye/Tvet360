@@ -101,7 +101,7 @@ const MoeStudents = () => {
       console.log(selectedInst);
       console.log(insts);
       console.log(insts.find(inst => inst.institutionName.toLowerCase() === selectedInst.toLocaleLowerCase()));
-      (async () => {let progs = await fetchProgramsForInstitutions(currentUser?.token, [...(insts.find(inst => inst.institutionName.toLowerCase() === selectedInst.toLowerCase()))]); console.log(progs); setProgs(progs)})();
+      (async () => {let progs = await fetchProgramsForInstitutions(currentUser?.token, [(insts.find(inst => inst.institutionName.toLowerCase() === selectedInst.toLowerCase()))]); console.log(progs); setProgs(progs)})();
     }
   }, [selectedInst, insts, currentUser]);
 
@@ -110,37 +110,7 @@ useEffect(() => {
   (async () => {setLoading(true)})();
   console.log("Selected prog");
   console.log(selectedProg);
-  if(selectedProg.toLowerCase() === "all")
-  {
-    //load all students
-    console.log("loading all students ");
-    console.log(selectedProg);
-    console.log(progs);
-    (async () => {
-      let pageResponse = await fetchStudentsForPrograms(currentUser?.token, [...progs], serverPageNumber);
-      console.log(pageResponse); 
-      setStudPageResponse(pageResponse);
-      setStuds(pageResponse.data);
-    })();
-  }
-  else
-  {
-    //load students enrolled in selected program
-    console.log("loading students of selected program");
-    console.log(selectedProg);
-    (async () => {
-      console.log(progs);
-      let pageResponse = await fetchStudentsForPrograms(currentUser?.token, [{"programCode": selectedProg, programName: selectedProg}], serverPageNumber);
-      console.log(pageResponse); 
-      setStudPageResponse(pageResponse);
-      setStuds(pageResponse.data);
-    })();
-  }
-  (async () => {setLoading(false)})();
-}, [progs, selectedProg, serverPageNumber, currentUser]);
 
-
-useEffect(() => {
   let params = {
     "gender": gender,
     "active": active,
@@ -154,8 +124,60 @@ useEffect(() => {
   };
 
   console.log(params);
-  (async () => {let pageResponse = await fetchFilteredStudentsForPrograms(currentUser?.token, progs, serverPageNumber, params); console.log(pageResponse); setStuds(pageResponse.data);})();
-}, [gender, active, reported, socioEconomic, disability, ruralLearner, nys, dualApp, rpl, currentUser?.token, progs, serverPageNumber]);
+
+  if(selectedProg.toLowerCase() === "all")
+  {
+    //load all students
+    console.log("loading all students ");
+    console.log(selectedProg);
+    console.log(progs);
+    (async () => {
+      let pageResponse = await fetchFilteredStudentsForPrograms(currentUser?.token, [...progs], serverPageNumber, params);
+      // let pageResponse = await fetchStudentsForPrograms(currentUser?.token, [...progs], serverPageNumber);
+      console.log(pageResponse); 
+      setStudPageResponse(pageResponse);
+      setStuds(pageResponse.data);
+    })();
+  }
+  else
+  {
+    //load students enrolled in selected program
+    console.log("loading students of selected program");
+    console.log(selectedProg);
+    (async () => {
+      console.log(progs);
+      let pageResponse = await fetchFilteredStudentsForPrograms(currentUser?.token, [{"programCode": selectedProg, programName: selectedProg}], serverPageNumber, params);
+      // let pageResponse = await fetchStudentsForPrograms(currentUser?.token, [{"programCode": selectedProg, programName: selectedProg}], serverPageNumber);
+      console.log(pageResponse); 
+      setStudPageResponse(pageResponse);
+      setStuds(pageResponse.data);
+    })();
+  }
+  (async () => {setLoading(false)})();
+}, [progs, selectedProg, serverPageNumber, currentUser, gender, active, reported, socioEconomic, disability, ruralLearner, nys, dualApp, rpl]);
+
+
+// useEffect(() => {
+//   let params = {
+//     "gender": gender,
+//     "active": active,
+//     "reported": reported,
+//     "socioEconomic": socioEconomic,
+//     "disability": disability,
+//     "ruralLearner": ruralLearner,
+//     "nys": nys,
+//     "dualApp": dualApp,
+//     "rpl": rpl
+//   };
+
+//   console.log(params);
+//   (async () => {
+//     let pageResponse = await fetchFilteredStudentsForPrograms(currentUser?.token, progs, serverPageNumber, params); 
+//     console.log(pageResponse); 
+//     console.log(pageResponse.data); 
+//     setStuds(pageResponse.data);
+//   })();
+// }, [gender, active, reported, socioEconomic, disability, ruralLearner, nys, dualApp, rpl, currentUser?.token, progs, serverPageNumber]);
 
 
   // Fetch students data
@@ -262,45 +284,45 @@ useEffect(() => {
   };
 
   // Apply filters and search
-  const filteredStudents = useMemo(() => {
-    console.warn("============================= Students ===============================");
-    console.log(studs);
-    return Array.isArray(studs) 
-    ? studs.filter(student => {
-        const matchesSearch = 
-          (student.studentName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-          (student.studentAdmissionNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-          (student.studentNumber || '').includes(searchTerm);
+  // const filteredStudents = useMemo(() => {
+  //   console.warn("============================= Students ===============================");
+  //   console.log(studs);
+  //   return Array.isArray(studs) 
+  //   ? studs.filter(student => {
+  //       const matchesSearch = 
+  //         (student.studentName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+  //         (student.studentAdmissionNumber?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+  //         (student.studentNumber || '').includes(searchTerm);
         
-        // const studentInstitution = institutionObjectMap[student.institutionRegistrationNumber];
-        // const studentInstitution = institutionObjectMap[student.institutionName];
-        // console.log(student.institutionRegistrationNumber);
-        // console.log("===================================== student institution =====================================")
-        // console.log(studentInstitution);
+  //       // const studentInstitution = institutionObjectMap[student.institutionRegistrationNumber];
+  //       // const studentInstitution = institutionObjectMap[student.institutionName];
+  //       // console.log(student.institutionRegistrationNumber);
+  //       // console.log("===================================== student institution =====================================")
+  //       // console.log(studentInstitution);
 
-        const matchesFilters = 
-          // (filters.programCode === 'all' || student.programCode === filters.programCode) &&
-          (filters.studentReportingStatus === 'all' || student.studentReportingStatus === filters.studentReportingStatus) &&
-          (filters.studentGender === 'all' || (student.studentGender?.toLowerCase() === filters.studentGender.toLowerCase())) &&
-          (filters.studentSocioEconomicStatus === 'all' || student.studentSocioEconomicStatus === filters.studentSocioEconomicStatus) &&
-          (filters.studentDisabilityStatus === 'all' || String(student.studentDisabilityStatus) === filters.studentDisabilityStatus) &&
-          (filters.studentRuralLearner === 'all' || String(student.studentRuralLearner) === filters.studentRuralLearner) &&
-          (filters.studentNYSEnrollment === 'all' || String(student.studentNYSEnrollment) === filters.studentNYSEnrollment) &&
-          (filters.studentDualApprenticeship === 'all' || String(student.studentDualApprenticeship) === filters.studentDualApprenticeship) &&
-          (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus) &&
-          // (filters.institution === 'all' || 
-          //   (student.institutionName || institutionMap[student.institutionRegistrationNumber] || '').toLowerCase().includes(filters.institution.toLowerCase())) &&
-          // (filters.county === 'all' || (student.institutionCounty === filters.county) || (studentInstitution && studentInstitution.institutionCounty === filters.county)) &&
-          // (filters.institutionType === 'all' || (studentInstitution && studentInstitution.institutionType === filters.institutionType)) &&
-          (filters.completionStatus === 'all' || 
-            (filters.completionStatus === 'Active' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) >= new Date()) ||
-            (filters.completionStatus === 'Inactive' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) < new Date())
-          );
+  //       const matchesFilters = 
+  //         // (filters.programCode === 'all' || student.programCode === filters.programCode) &&
+  //         (filters.studentReportingStatus === 'all' || student.studentReportingStatus === filters.studentReportingStatus) &&
+  //         (filters.studentGender === 'all' || (student.studentGender?.toLowerCase() === filters.studentGender.toLowerCase())) &&
+  //         (filters.studentSocioEconomicStatus === 'all' || student.studentSocioEconomicStatus === filters.studentSocioEconomicStatus) &&
+  //         (filters.studentDisabilityStatus === 'all' || String(student.studentDisabilityStatus) === filters.studentDisabilityStatus) &&
+  //         (filters.studentRuralLearner === 'all' || String(student.studentRuralLearner) === filters.studentRuralLearner) &&
+  //         (filters.studentNYSEnrollment === 'all' || String(student.studentNYSEnrollment) === filters.studentNYSEnrollment) &&
+  //         (filters.studentDualApprenticeship === 'all' || String(student.studentDualApprenticeship) === filters.studentDualApprenticeship) &&
+  //         (filters.studentRPLStatus === 'all' || String(student.studentRPLStatus) === filters.studentRPLStatus) &&
+  //         // (filters.institution === 'all' || 
+  //         //   (student.institutionName || institutionMap[student.institutionRegistrationNumber] || '').toLowerCase().includes(filters.institution.toLowerCase())) &&
+  //         // (filters.county === 'all' || (student.institutionCounty === filters.county) || (studentInstitution && studentInstitution.institutionCounty === filters.county)) &&
+  //         // (filters.institutionType === 'all' || (studentInstitution && studentInstitution.institutionType === filters.institutionType)) &&
+  //         (filters.completionStatus === 'all' || 
+  //           (filters.completionStatus === 'Active' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) >= new Date()) ||
+  //           (filters.completionStatus === 'Inactive' && student.studentExpectedCompletionDate && new Date(student.studentExpectedCompletionDate) < new Date())
+  //         );
         
-        return matchesSearch && matchesFilters;
-      })
-    : [];
-  }, [studs, searchTerm, filters]);
+  //       return matchesSearch && matchesFilters;
+  //     })
+  //   : [];
+  // }, [studs, searchTerm, filters]);
 
   // const uniqueProgramsForFilteredStudents = useMemo(() => {
   //   return [...new Set(filteredStudents.map(item => item.programCode).filter(Boolean))];
@@ -363,6 +385,12 @@ useEffect(() => {
   const totalProgramPages = Math.ceil(progs.length / programsPerPage);
 
   // Pagination logic
+  useEffect(() => {//update current page to first page whenever student data changes
+    if( serverPageNumber === 0 )
+    {
+      ( async () => {setCurrentPage(1);})();
+    }
+  }, [serverPageNumber, studs]);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentStudents = studs.slice(indexOfFirstItem % 100, (indexOfLastItem % 100 === 0 ? 100 : indexOfLastItem % 100));//studs.slice(indexOfFirstItem, indexOfLastItem);
@@ -412,22 +440,32 @@ useEffect(() => {
 
   // Reset all filters
   const resetFilters = () => {
-    setFilters({
-      programCode: 'all',
-      studentReportingStatus: 'all',
-      studentGender: 'all',
-      studentSocioEconomicStatus: 'all',
-      studentDisabilityStatus: 'all',
-      studentRuralLearner: 'all',
-      studentNYSEnrollment: 'all',
-      studentDualApprenticeship: 'all',
-      studentRPLStatus: 'all',
-      institution: 'all',
-      county: 'all',
-      institutionType: 'all',
-      completionStatus: 'Active'
-    });
-    setSearchTerm('');
+  setServerPageNumber(0);
+  setGender("ALL");
+  setActive("ALL");
+  setReported("ALL");
+  setSocioEconomic("ALL");
+  setDisability("ALL");
+  setRuralLearner("ALL");
+  setNys("ALL");
+  setDualApp("ALL");
+  setRpl("ALL");
+    // setFilters({
+    //   programCode: 'all',
+    //   studentReportingStatus: 'all',
+    //   studentGender: 'all',
+    //   studentSocioEconomicStatus: 'all',
+    //   studentDisabilityStatus: 'all',
+    //   studentRuralLearner: 'all',
+    //   studentNYSEnrollment: 'all',
+    //   studentDualApprenticeship: 'all',
+    //   studentRPLStatus: 'all',
+    //   institution: 'all',
+    //   county: 'all',
+    //   institutionType: 'all',
+    //   completionStatus: 'Active'
+    // });
+    // setSearchTerm('');
     setCurrentPage(1);
     // fetchStudents(); // Reset to show all students
   };
@@ -557,6 +595,7 @@ useEffect(() => {
                       onChange={event => {
                         let newVal = event.target?.value;
                         console.log(newVal);
+                        setServerPageNumber(0);
                         setSelectedProg(newVal);
                       }}
                       className="w-full p-2 border rounded-md"
@@ -579,6 +618,7 @@ useEffect(() => {
                       onChange={(event => {
                         let newVal = event.target?.value;
                         console.log(newVal);
+                        setServerPageNumber(0);
                         setActive(newVal);
                       })}
                       className="w-full p-2 border rounded-md"
@@ -597,6 +637,7 @@ useEffect(() => {
                       onChange={event => {
                         let newVal = event.target?.value;
                         console.log(newVal);
+                        setServerPageNumber(0);
                         setReported(newVal);
                       }}
                       className="w-full p-2 border rounded-md"
@@ -615,6 +656,7 @@ useEffect(() => {
                       onChange={event => {
                         let newVal = event.target?.value;
                         console.log(newVal);
+                        setServerPageNumber(0);
                         setGender(newVal);
                       }}
                       className="w-full p-2 border rounded-md"
@@ -634,6 +676,7 @@ useEffect(() => {
                       onChange={event => {
                         let newVal = event.target?.value;
                         console.log(newVal);
+                        setServerPageNumber(0);
                         setSocioEconomic(newVal);
                       }}
                       className="w-full p-2 border rounded-md"
@@ -653,6 +696,7 @@ useEffect(() => {
                       onChange={event => {
                         let newVal = event.target?.value;
                         console.log(newVal);
+                        setServerPageNumber(0);
                         setDisability(newVal)
                       }}
                       className="w-full p-2 border rounded-md"
@@ -671,6 +715,7 @@ useEffect(() => {
                       onChange={event => {
                         let newVal = event.target?.value;
                         console.log(newVal);
+                        setServerPageNumber(0);
                         setRuralLearner(newVal);
                       }}
                       className="w-full p-2 border rounded-md"
@@ -689,6 +734,7 @@ useEffect(() => {
                       onChange={event => {
                         let newVal = event.target?.value;
                         console.log(newVal);
+                        setServerPageNumber(0);
                         setNys(newVal);
                       }}
                       className="w-full p-2 border rounded-md"
@@ -707,6 +753,7 @@ useEffect(() => {
                       onChange={event => {
                         let newVal = event.target?.value;
                         console.log(newVal);
+                        setServerPageNumber(0);
                         setDualApp(newVal);
                       }}
                       className="w-full p-2 border rounded-md"
@@ -725,6 +772,7 @@ useEffect(() => {
                       onChange={event => {
                         let newVal = event.target?.value;
                         console.log(newVal);
+                        setServerPageNumber(0);
                         setRpl(newVal);
                       }}
                       className="w-full p-2 border rounded-md"
