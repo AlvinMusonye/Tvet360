@@ -1,13 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useAuth } from '../context/AuthContext';
+import { formatNumberAsCommaSeparatedNumberString } from './utils/NumberFormatUtls';
+import { fetchStudentCountData, fetchTotalProgramsOffered } from './service/MoeDashboardService';
+import YearlyIntakeComparisonPieChart from './YearlyIntakeComparisonPieChart';
+import EnrollmentTrendLineGraph from './EnrollmentTrendLineGraph';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
 
 const Moe = () => {
+  const [totalNationalPolytechnics, setTotalNationalPolytechnics] = useState(0);
+  const [totalVocationalAndTechnicalColleges, setTotalVocationalAndTechnicalColleges] = useState(0);
+  const [totalTechnicalTrainerColleges, setTotalTechnicalTrainerColleges] = useState(0);
+  const [totalVocationalTrainingCenters, setTotalVocationalTrainingCenters] = useState(0);
+
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [totalPrograms, setTotalPrograms] = useState(0);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [totalActiveStudents, setTotalActiveStudents] = useState(0);
   
   // State for all data points initialized with defaults
   const [dashboardData, setDashboardData] = useState({
@@ -19,6 +32,22 @@ const Moe = () => {
   });
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+  useEffect(() => {
+    (async () => {
+      let resp = await fetchTotalProgramsOffered(); 
+      console.log(resp);
+      console.log(resp.data);
+      setTotalPrograms(resp.data.totalProgramCount);
+    })();
+    ( async () => {
+      let resp = await fetchStudentCountData(); 
+      console.log(resp); 
+      console.log(resp.data);
+      setTotalStudents(resp.data.totalStudentCount);
+      setTotalActiveStudents(resp.data.activeStudentCount);
+    })();
+  }, []);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -62,9 +91,9 @@ const Moe = () => {
           fetchData('average-governance-score')
         ]);
 
-        console.log('Dashboard Data Fetched:', {
-          totalRes, byTypeRes, byAccreditationRes, riskIndexRes, governanceScoreRes
-        });
+        // console.log('Dashboard Data Fetched:', {
+        //   totalRes, byTypeRes, byAccreditationRes, riskIndexRes, governanceScoreRes
+        // });
 
         setDashboardData({
           totalInstitutions: totalRes.data?.value ?? 0,
@@ -76,9 +105,38 @@ const Moe = () => {
           averageRiskIndex: riskIndexRes.data?.value ?? 0,
           averageGovernanceScore: governanceScoreRes.data?.value ?? 0
         });
+        // console.log("================================ Received accreditation status data =================================");
+        // console.log(byAccreditationRes);
+
+        let instCountByType = byTypeRes?.data;
+
+        if( Array.isArray(instCountByType) )
+        {
+          instCountByType.forEach(item => {
+            if( item.institutionType.toUpperCase() === "TECHNICAL_TRAINING_COLLEGE" )
+            {
+              setTotalVocationalAndTechnicalColleges(item.totalNumber);
+            }
+
+            if(item.institutionType.toUpperCase() === "POLYTECHNIC")
+            {
+              setTotalNationalPolytechnics(item.totalNumber);
+            }
+
+            if(item.institutionType.toUpperCase() === "VOCATIONAL_TRAINING_CENTER")
+            {
+              setTotalVocationalTrainingCenters(item.totalNumber);
+            }
+
+            if(item.institutionType.toUpperCase() === "TRAINER_COLLEGE")
+            {
+              setTotalTechnicalTrainerColleges(item.totalNumber);
+            }
+          });
+        }
 
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
+        // console.error('Error fetching dashboard data:', err);
         setError('Failed to load dashboard data. Please check your connection.');
       } finally {
         setLoading(false);
@@ -91,18 +149,20 @@ const Moe = () => {
   // Calculate accredited rate safely
   const calculateAccreditedRate = () => {
     const { institutionsByAccreditation } = dashboardData;
+    // console.log("============== calculating accreditation status =================");
+    // console.log(institutionsByAccreditation);
     if (!institutionsByAccreditation || !institutionsByAccreditation.length) return 0;
     
     const total = institutionsByAccreditation.reduce(
-      (sum, item) => sum + (item.count || 0), 0
+      (sum, item) => sum + (item.totalNumber || 0), 0
     );
     
     if (total === 0) return 0;
     
     // Assuming the status might be 'ACCREDITED' or similar - adjust based on actual data if needed
     const accredited = institutionsByAccreditation.find(
-      item => item.status?.toUpperCase() === 'ACCREDITED'
-    )?.count || 0;
+      item => item.institutionAccreditationStatus?.toUpperCase() === 'ACCREDITED'
+    )?.totalNumber || 0;
     
     return Math.round((accredited / total) * 100);
   };
@@ -147,10 +207,113 @@ const Moe = () => {
         <p className="text-gray-600">Real-time monitoring across all TVET institutions</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {/* Total Institutions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="grid grid-cols-1 ">
+            <div className="flex items-center justify-start">
+              <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <p className="text-sm font-bold text-start text-gray-500">Total Institutions </p>
+            </div>
+            <div>
+              <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalInstitutions)}`}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="grid grid-cols-1 ">
+            <div className="flex items-center justify-start">
+              <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 10h16M4 14h10M4 18h10M16 14l2 2 4-4"
+                  />
+                </svg>
+
+              </div>
+              <p className="text-sm font-bold text-start text-gray-500">Total programs offered</p>
+            </div>
+            <div>
+              <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalPrograms)}`}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="grid grid-cols-1 ">
+            <div className="flex items-center justify-start">
+              <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 14c3.314 0 6 1.686 6 4v2H6v-2c0-2.314 2.686-4 6-4zm0-2a4 4 0 100-8 4 4 0 000 8z"
+                  />
+                </svg>
+
+              </div>
+              <p className="text-sm font-bold text-start text-gray-500">Total students enrolled</p>
+            </div>
+            <div>
+              <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalStudents)}`}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="grid grid-cols-1 ">
+            <div className="flex items-center justify-start">
+              <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 14c3.314 0 6 1.686 6 4v2H6v-2c0-2.314 2.686-4 6-4zm0-2a4 4 0 100-8 4 4 0 000 8zm6 1l2 2 4-4"
+                  />
+                </svg>
+
+              </div>
+              <p className="text-sm font-bold text-start text-gray-500">Total active students</p>
+            </div>
+            <div>
+              <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalActiveStudents)}`}</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Stats Grid */}
+      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"> */}
+        {/* Total Institutions */}
+        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <p className="text-sm font-medium text-gray-500">Total Institutions</p>
           {loading ? (
             <div className="animate-pulse h-8 bg-gray-200 rounded w-3/4 mt-2"></div>
@@ -159,10 +322,10 @@ const Moe = () => {
               {totalInstitutions.toLocaleString()}
             </h3>
           )}
-        </div>
+        </div> */}
 
         {/* Average Governance Score */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <p className="text-sm font-medium text-gray-500">Avg Governance Score</p>
           {loading ? (
             <div className="animate-pulse h-8 bg-gray-200 rounded w-3/4 mt-2"></div>
@@ -181,10 +344,10 @@ const Moe = () => {
               </span>
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Average Risk Index */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <p className="text-sm font-medium text-gray-500">Average Risk Index</p>
           {loading ? (
             <div className="animate-pulse h-8 bg-gray-200 rounded w-3/4 mt-2"></div>
@@ -203,10 +366,10 @@ const Moe = () => {
               </span>
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Accredited Rate */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <p className="text-sm font-medium text-gray-500">Accredited Rate</p>
           {loading ? (
             <div className="animate-pulse h-8 bg-gray-200 rounded w-3/4 mt-2"></div>
@@ -215,7 +378,99 @@ const Moe = () => {
               {accreditedRate}%
             </h3>
           )}
+        </div> */}
+      {/* </div> */}
+
+
+      {/* CHARTS SECTION */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 my-2 bg-white p-6 rounded-lg shadow mb-8">
+        <div>
+          <YearlyIntakeComparisonPieChart />
         </div>
+        <div>
+          <EnrollmentTrendLineGraph />
+        </div>
+      </div>
+
+
+      {/* Institution totals summaries */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="grid grid-cols-1 ">
+            <div className="flex items-center justify-start">
+              <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <p className="text-sm font-bold text-start text-gray-500">National Polytechnics </p>
+            </div>
+            <div>
+              <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalNationalPolytechnics)}`}</p>
+              <p className="mt-1 text-sm text-gray-500 text-center">
+                {totalInstitutions > 0 ? ((totalNationalPolytechnics / totalInstitutions) * 100).toFixed(1) : 0}% of Total
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="grid grid-cols-1 ">
+            <div className="flex items-center justify-start">
+              <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <p className="text-sm font-bold text-start text-gray-500">Technical and Vocational Colleges </p>
+            </div>
+            <div>
+              <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalVocationalAndTechnicalColleges)}`}</p>
+              <p className="mt-1 text-sm text-gray-500 text-center">
+                {totalInstitutions > 0 ? ((totalVocationalAndTechnicalColleges / totalInstitutions) * 100).toFixed(1) : 0}% of Total
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="grid grid-cols-1 ">
+            <div className="flex items-center justify-start">
+              <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <p className="text-sm font-bold text-start text-gray-500">Technical Trainer Colleges </p>
+            </div>
+            <div>
+              <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalTechnicalTrainerColleges)}`}</p>
+              <p className="mt-1 text-sm text-gray-500 text-center">
+                {totalInstitutions > 0 ? ((totalTechnicalTrainerColleges / totalInstitutions) * 100).toFixed(1) : 0}% of Total
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="grid grid-cols-1 ">
+            <div className="flex items-center justify-start">
+              <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+              </div>
+              <p className="text-sm font-bold text-start text-gray-500">Vocational Training centers </p>
+            </div>
+            <div>
+              <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalVocationalTrainingCenters)}`}</p>
+              <p className="mt-1 text-sm text-gray-500 text-center">
+                {totalInstitutions > 0 ? ((totalVocationalTrainingCenters / totalInstitutions) * 100).toFixed(1) : 0}% of Total
+              </p>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* Charts Section */}
@@ -281,7 +536,7 @@ const Moe = () => {
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis 
-                    dataKey="status" 
+                    dataKey="institutionAccreditationStatus" 
                     tick={{ fontSize: 12 }}
                     tickFormatter={(value) => value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : ''}
                   />
@@ -294,7 +549,7 @@ const Moe = () => {
                     labelFormatter={(label) => `Status: ${label}`}
                   />
                   <Bar 
-                    dataKey="count" 
+                    dataKey="totalNumber" 
                     name="Number of Institutions" 
                     fill="#8884d8" 
                     radius={[4, 4, 0, 0]}

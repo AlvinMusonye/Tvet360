@@ -5,6 +5,7 @@ import { fetchFilteredStudentsForPrograms, fetchInstitutionCounties, fetchInstit
 import GenderStackedBarChart from './StackedGenderBarCharts';
 import SocioEconomicStackedBarChart from './StackedSocioEconomicBarCharts';
 import AgeStackedBarCharts from './StackedAgeBarCharts';
+import { formatNumberAsCommaSeparatedNumberString } from '../Dashboards/utils/NumberFormatUtls';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
 
@@ -805,7 +806,7 @@ useEffect(() => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Total </p>
-              <p className="mt-1 text-3xl font-semibold text-gray-900">{`${totalStudents}`}</p>
+              <p className="mt-1 text-3xl font-semibold text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalStudents)}`}</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-full">
               <Users className="h-6 w-6 text-blue-600" />
@@ -817,7 +818,7 @@ useEffect(() => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Active Students</p>
-              <p className="mt-1 text-3xl font-semibold text-green-600">{`${activeStudents}`}</p>
+              <p className="mt-1 text-3xl font-semibold text-green-600">{`${formatNumberAsCommaSeparatedNumberString(activeStudents)}`}</p>
               <p className="mt-1 text-sm text-gray-500">
                 {totalStudents > 0 ? ((activeStudents / totalStudents) * 100).toFixed(1) : 0}% of Total
               </p>
@@ -832,7 +833,7 @@ useEffect(() => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Active Male</p>
-              <p className="mt-1 text-3xl font-semibold text-blue-600">{`${activeMaleStudents}`}</p>
+              <p className="mt-1 text-3xl font-semibold text-blue-600">{`${formatNumberAsCommaSeparatedNumberString(activeMaleStudents)}`}</p>
               <p className="mt-1 text-sm text-gray-500">
                 {activeStudents > 0 ? ((activeMaleStudents / activeStudents) * 100).toFixed(1) : 0}% of Active
               </p>
@@ -847,7 +848,7 @@ useEffect(() => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500">Active Female</p>
-              <p className="mt-1 text-3xl font-semibold text-pink-600">{`${activeFemaleStudents}`}</p>
+              <p className="mt-1 text-3xl font-semibold text-pink-600">{`${formatNumberAsCommaSeparatedNumberString(activeFemaleStudents)}`}</p>
               <p className="mt-1 text-sm text-gray-500">
                 {activeStudents > 0 ? ((activeFemaleStudents / activeStudents) * 100).toFixed(1) : 0}% of Active
               </p>
@@ -874,7 +875,7 @@ useEffect(() => {
                     <span className="text-sm font-medium text-gray-700 truncate">{item.programName || 'N/A'}</span>
                     <div className="text-right">
                       <span className="text-sm font-semibold text-blue-600">{((item.totalActiveStudentCount / item.totalStudentCount) * 100).toFixed(1)}%</span>
-                      <p className="text-xs text-gray-500">{item.totalStudentCount} Students</p>
+                      <p className="text-xs text-gray-500">{formatNumberAsCommaSeparatedNumberString(item.totalStudentCount)} Students</p>
                     </div>
                   </div>
                 ))
@@ -891,7 +892,7 @@ useEffect(() => {
                 >
                   Previous
                 </button>
-                <span className="text-xs text-gray-500">Page {programPage} of {totalProgramPages}</span>
+                <span className="text-xs text-gray-500">Page {formatNumberAsCommaSeparatedNumberString(programPage)} of {formatNumberAsCommaSeparatedNumberString(totalProgramPages)}</span>
                 <button
                   onClick={() => setProgramPage(prev => Math.min(prev + 1, totalProgramPages))}
                   disabled={programPage === totalProgramPages}
@@ -985,8 +986,8 @@ useEffect(() => {
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">{studs.length > 0 ? indexOfFirstItem + 1 : 0}</span> to <span className="font-medium">{Math.min(indexOfLastItem, studPageResponse.totalElements)}</span> of{' '}
-                <span className="font-medium">{studPageResponse.totalElements}</span> results
+                Showing <span className="font-medium">{formatNumberAsCommaSeparatedNumberString(studs.length > 0 ? indexOfFirstItem + 1 : 0)}</span> to <span className="font-medium">{formatNumberAsCommaSeparatedNumberString(Math.min(indexOfLastItem, studPageResponse.totalElements))}</span> of{' '}
+                <span className="font-medium">{formatNumberAsCommaSeparatedNumberString(studPageResponse.totalElements)}</span> results
               </p>
             </div>
             <div>
@@ -1020,7 +1021,7 @@ useEffect(() => {
                   <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                 </button>
                 <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                  Page {currentPage} of {totalPages || 1}
+                  Page {formatNumberAsCommaSeparatedNumberString(currentPage)} of {formatNumberAsCommaSeparatedNumberString(totalPages) || 1}
                 </span>
                 <button
                   onClick={() => {

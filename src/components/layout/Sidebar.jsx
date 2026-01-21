@@ -22,8 +22,8 @@ const Sidebar = () => {
         return 'sp';
       default:
         // Fallback for safety, though a logged-in user should have a role.
-        const pathSegments = location.pathname.split('/').filter(Boolean);
-        return pathSegments[0] || 'moe';
+        { const pathSegments = location.pathname.split('/').filter(Boolean);
+        return pathSegments[0] || 'moe'; }
     }
   };
 
