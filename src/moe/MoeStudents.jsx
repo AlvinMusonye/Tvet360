@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Search, Filter, Users, ChevronDown, Download, ChevronLeft, ChevronRight } from 'lucide-react';
-import { fetchFilteredStudentsForPrograms, fetchInstitutionCounties, fetchInstitutions, fetchInstitutionsByCounty, fetchInstitutionsByType, fetchInstitutionsByTypeAndCounty, fetchInstitutionTypes, fetchProgramsForInstitutions, fetchStudentsForPrograms } from './moe-students/MoeStudentService';
+import { fetchFilteredStudentsForPrograms, fetchInstitutionCounties, fetchInstitutions, fetchInstitutionsByCounty, fetchInstitutionsByType, fetchInstitutionsByTypeAndCounty, fetchInstitutionTypes, fetchProgramsForInstitutions, fetchStudentsForPrograms } from './service/MoeStudentService';
 import GenderStackedBarChart from './StackedGenderBarCharts';
 import SocioEconomicStackedBarChart from './StackedSocioEconomicBarCharts';
 import AgeStackedBarCharts from './StackedAgeBarCharts';

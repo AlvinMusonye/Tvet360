@@ -4,7 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { formatNumberAsCommaSeparatedNumberString } from './utils/NumberFormatUtls';
 import { fetchStudentCountData, fetchTotalProgramsOffered } from './service/MoeDashboardService';
 import YearlyIntakeComparisonPieChart from './YearlyIntakeComparisonPieChart';
-import EnrollmentTrendLineGraph from './EnrollmentTrendLineGraph';
+import EnrollmentTrendLineGraph from './EnrollmentTrendBarGraph';
+import EnrollmentTrendBarGraph from './EnrollmentTrendBarGraph';
+import EnrollmentHistory from '../moe/EnrollmentHistory';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
 
@@ -309,90 +311,7 @@ const Moe = () => {
         </div>
 
       </div>
-
-      {/* Stats Grid */}
-      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"> */}
-        {/* Total Institutions */}
-        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <p className="text-sm font-medium text-gray-500">Total Institutions</p>
-          {loading ? (
-            <div className="animate-pulse h-8 bg-gray-200 rounded w-3/4 mt-2"></div>
-          ) : (
-            <h3 className="text-2xl font-bold text-gray-800 mt-1">
-              {totalInstitutions.toLocaleString()}
-            </h3>
-          )}
-        </div> */}
-
-        {/* Average Governance Score */}
-        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <p className="text-sm font-medium text-gray-500">Avg Governance Score</p>
-          {loading ? (
-            <div className="animate-pulse h-8 bg-gray-200 rounded w-3/4 mt-2"></div>
-          ) : (
-            <div className="flex items-center">
-              <h3 className="text-2xl font-bold text-gray-800 mt-1 mr-2">
-                {averageGovernanceScore.toFixed(1)}%
-              </h3>
-              <span className={`text-sm px-2 py-1 rounded-full ${
-                averageGovernanceScore >= 70 ? 'bg-green-100 text-green-800' :
-                averageGovernanceScore >= 50 ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {averageGovernanceScore >= 70 ? 'Good' :
-                 averageGovernanceScore >= 50 ? 'Average' : 'Needs Improvement'}
-              </span>
-            </div>
-          )}
-        </div> */}
-
-        {/* Average Risk Index */}
-        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <p className="text-sm font-medium text-gray-500">Average Risk Index</p>
-          {loading ? (
-            <div className="animate-pulse h-8 bg-gray-200 rounded w-3/4 mt-2"></div>
-          ) : (
-            <div className="flex items-center">
-              <h3 className="text-2xl font-bold text-gray-800 mt-1 mr-2">
-                {averageRiskIndex.toFixed(1)}
-              </h3>
-              <span className={`text-sm px-2 py-1 rounded-full ${
-                averageRiskIndex < 3 ? 'bg-green-100 text-green-800' :
-                averageRiskIndex < 7 ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {averageRiskIndex < 3 ? 'Low' :
-                 averageRiskIndex < 7 ? 'Medium' : 'High'} Risk
-              </span>
-            </div>
-          )}
-        </div> */}
-
-        {/* Accredited Rate */}
-        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <p className="text-sm font-medium text-gray-500">Accredited Rate</p>
-          {loading ? (
-            <div className="animate-pulse h-8 bg-gray-200 rounded w-3/4 mt-2"></div>
-          ) : (
-            <h3 className="text-2xl font-bold text-gray-800 mt-1">
-              {accreditedRate}%
-            </h3>
-          )}
-        </div> */}
-      {/* </div> */}
-
-
-      {/* CHARTS SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 my-2 bg-white p-6 rounded-lg shadow mb-8">
-        <div>
-          <YearlyIntakeComparisonPieChart />
-        </div>
-        <div>
-          <EnrollmentTrendLineGraph />
-        </div>
-      </div>
-
-
+      
       {/* Institution totals summaries */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
@@ -473,10 +392,22 @@ const Moe = () => {
 
       </div>
 
+
+
+      {/* CHARTS SECTION */}
+      <div className="grid grid-cols-1 my-2 bg-white p-6 rounded-lg shadow mb-8">
+        {/* <div>
+          <YearlyIntakeComparisonPieChart />
+        </div> */}
+        <div className=' w-full'>
+          <EnrollmentHistory />
+        </div>
+      </div>
+
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"> */}
         {/* Institutions by Type */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <h4 className="text-lg font-semibold text-gray-800 mb-4">Institutions by Type</h4>
           {loading ? (
             <div className="h-64 flex items-center justify-center">
@@ -494,12 +425,15 @@ const Moe = () => {
                     dataKey="type" 
                     tick={false}
                     height={10}
-                    axisLine={false}
+                    axisLine={true}
+                    tickFormatter={(value) => value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : ''}
+                    label={true}
                   />
                   <YAxis allowDecimals={false} />
                   <Tooltip 
                     cursor={{ fill: 'transparent' }}
                     formatter={(value) => [`${value} Institutions`, 'Count']}
+                    labelFormatter={label => `Type: ${label}`}
                   />
                   <Legend 
                     payload={displayInstitutionTypes.map((item, index) => ({
@@ -518,10 +452,10 @@ const Moe = () => {
               </ResponsiveContainer>
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Institutions by Accreditation Status */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <h4 className="text-lg font-semibold text-gray-800 mb-4">Accreditation Status</h4>
           {loading ? (
             <div className="h-64 flex items-center justify-center">
@@ -543,6 +477,7 @@ const Moe = () => {
                   <YAxis 
                     tick={{ fontSize: 12 }}
                     tickFormatter={(value) => value.toLocaleString()}
+                    allowDecimals={false}
                   />
                   <Tooltip 
                     formatter={(value) => [`${value} institutions`, 'Count']}
@@ -566,8 +501,9 @@ const Moe = () => {
               No accreditation data available
             </div>
           )}
-        </div>
-      </div>
+        </div> */}
+
+      {/* </div> */}
     </div>
   );
 };
