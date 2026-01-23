@@ -25,14 +25,14 @@ const EnrollmentForLastThreeIntakes = () => {
     }, []);
 
     return (
-        <div className="w-full mb-4 p-6 shadow">
+        <div className="w-full mb-4 p-6 shadow" >
             <div className="w-full">
                 <h2 className="text-lg font-semibold mb-4 flex items-center justify-between gap-2 ">
                     <span className="flex items-center"><Briefcase className="w-5 h-5 me-4" />Last Three Intakes</span>
                 </h2>
             </div>
             <div className="w-full h-80">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" >
             <ComposedChart
                 data={intakeData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}

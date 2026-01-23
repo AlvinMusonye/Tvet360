@@ -68,11 +68,11 @@ return (<>
                     }}
                     className="w-full p-2 border rounded-sm"
                 >
-                    {intakeOptions.map(intake => <option value={intake}>{`${intake}`}</option> )}
+                    {intakeOptions.map((intake, index) => <option key={index} value={intake}>{`${intake}`}</option> )}
                 </select>
             </div>
         </h2>
-        <div className="h-80">
+        <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart
                     data={selectedIntakeData}

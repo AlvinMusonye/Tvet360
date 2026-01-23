@@ -4,7 +4,7 @@ import {
 
 import { Briefcase } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { formatNumberAsCommaSeparatedNumberString } from './utils/NumberFormatUtls';
+import { formatNumberAsCommaSeparatedNumberString } from '../../Dashboards/utils/NumberFormatUtls';
 
 
 const YearlyIntakeComparisonPieChart = () => {

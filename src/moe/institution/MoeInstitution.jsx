@@ -3,7 +3,6 @@ import { useAuth } from '../../context/AuthContext';
 import { Search, Filter, Plus, X, BarChart as BarChartIcon, Edit } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { fetchInstitutionTotalsByType } from '../service/MoeInstitutionService';
-import { formatNumberAsCommaSeparatedNumberString } from '../../Dashboards/utils/NumberFormatUtls';
 import AverageGovernanceScoreTrend from '../AverageGovernanceScoreTrend';
 import AverageCorruptionRiskIndexTrend from '../AverageCorruptionRiskIndexTrend';
 import AddInstitutionModal from './AddInstituionModal';
@@ -65,7 +64,8 @@ const MoeInstitution = () => {
     { institutionAccreditationStatus: 'NOT ACCREDITED', institutionCount: 0 }
   ];
 
-  const [institutionTypes, setInstitutionTypes] = useState([]);
+  // const [institutionTypes, setInstitutionTypes] = useState([]);
+  const institutionTypes = ["POLYTECHNIC", "TECHNICAL_TRAINING_INSTITUTE", "INSTITUTE_OF_TECHNOLOGY", "VOCATIONAL_AND_TECHNICAL_COLLEGE"];
 
   const [totalNationalPolytechnics, setTotalNationalPolytechnics] = useState(0);
   const [totalVocationalAndTechnicalColleges, setTotalVocationalAndTechnicalColleges] = useState(0);
@@ -359,10 +359,10 @@ const MoeInstitution = () => {
 
       if (typesData.status === 200 && Array.isArray(typesData.data)) {
         // Ensure the key is 'type' for consistency
-        const formattedTypes = typesData.data.map(item => ({
-          type: item.institutionType,
-          count: item.totalNumber
-        }));
+        // const formattedTypes = typesData.data.map(item => ({
+        //   type: item.institutionType,
+        //   count: item.totalNumber
+        // }));
         // setInstitutionTypes(formattedTypes);
       }
 
@@ -926,7 +926,8 @@ const MoeInstitution = () => {
                       setSelectedType(newVal);
                   }}
                 >
-                  {institutionTypes.map(type => (<option value={type.institutionType} >{type.institutionType}</option>))}
+                  <option value="All">All Types</option>
+                  {institutionTypes.map(type => (<option value={type} >{type}</option>))}
                   {/* <option value="All">All Types</option>
                   <option value="NATIONAL_POLYTECHNIC">Polytechnic</option>
                   <option value="INSTITUTE_OF_TECHNOLOGY">Institute of Technology</option>

@@ -1,4 +1,4 @@
-import EnrollmentTrendBarGraph from "../Dashboards/EnrollmentTrendBarGraph";
+import EnrollmentTrendBarGraph from "./enrollment/EnrollmentTrendBarGraph";
 import CrossIntakeComparison from "./enrollment/CrossIntakeComparison";
 import EnrollmentForLastThreeIntakes from "./enrollment/EnrollmentForLastThreeIntakes";
 import IntakeGroupedBarChartForPastFiveYears from "./enrollment/IntakeGroupedBarChartForPastFiveYears";

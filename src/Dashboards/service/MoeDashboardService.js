@@ -34,7 +34,25 @@ const fetchTotalProgramsOffered = async () => {
     return response.json();
 };
 
+
+const fetchInstituionTypeSummaries = async () => {
+    const response = await fetch(`${API_BASE_URL}/api/v1/student-enrollment/enroll-summary-by-inst-typ`, {
+    headers: {"Content-Type": "application/json"}
+    });
+    
+    if (response.status === 200) {
+        // let data = await response.json();
+        console.log(response);
+    }
+    else{
+        console.error(`Failed to fetch total students: ${response}`);
+    }
+    
+    return response.json();
+};
+
 export {
     fetchStudentCountData,
-    fetchTotalProgramsOffered
+    fetchTotalProgramsOffered,
+    fetchInstituionTypeSummaries
 };

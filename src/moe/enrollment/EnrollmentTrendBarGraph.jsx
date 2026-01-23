@@ -6,8 +6,8 @@ import {
 } from 'recharts';
 
 import { TrendingUp } from 'lucide-react';
-import { formatNumberAsCommaSeparatedNumberString } from './utils/NumberFormatUtls';
-import { fetchTotalStudentEnrollmentForThePastFiveYears } from '../moe/enrollment/service/EnrollmentService';
+import { formatNumberAsCommaSeparatedNumberString } from '../../Dashboards/utils/NumberFormatUtls';
+import { fetchTotalStudentEnrollmentForThePastFiveYears } from './service/EnrollmentService';
 
 const EnrollmentTrendBarGraph = () => {
   const [enrollmentTrend, setEnrollmentTrend] = useState([]);
@@ -34,11 +34,11 @@ const EnrollmentTrendBarGraph = () => {
         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <TrendingUp className="w-5 h-5" />Enrollment trend for the past five years
         </h2>
-        <div className="h-80">
+        <div className="h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
               data={enrollmentTrend}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="key" />

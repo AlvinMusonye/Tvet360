@@ -4,6 +4,10 @@ import {
   CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line 
 } from 'recharts';
 import { DollarSign, TrendingUp, BarChart2, PieChart as PieIcon, X, Calendar, Eye, Download } from 'lucide-react';
+import NationalFundingSources from './financial/NationalFundingSources';
+import RevenueAndExpenditure from './financial/RevenueAndExpenditure';
+import YearOverYearComparison from './financial/YearOverYearComparison';
+import FinancialProjections from './financial/FinancialProjections';
 
 // Mock data for MOE level - replace with actual API calls
 const overviewStats = {
@@ -13,11 +17,12 @@ const overviewStats = {
   unallocated: 'Ksh 8.7B',
 };
 
-const nationalFundingAllocation = [
-  { name: 'Capitation Grants', value: 45, color: '#0088FE' },
-  { name: 'Infrastructure Dev.', value: 30, color: '#00C49F' },
-  { name: 'Student Loans & Bursaries', value: 15, color: '#FFBB28' },
-  { name: 'Special Programs', value: 10, color: '#FF8042' },
+const fincancialSources = [
+  { name: 'Capitation', value: 45, color: '#0088FE' },
+  { name: 'HELB', value: 30, color: '#00C49F' },
+  { name: 'NYS', value: 15, color: '#FFBB28' },
+  { name: 'CDF', value: 10, color: '#FF8042' },
+  { name: 'County', value: 10, color: '#ba42ff' },
 ];
 
 const expenditureTrend = [
@@ -94,7 +99,7 @@ const financialAudits = [
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const FinancialManagement = () => {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('sources');
   const [showDisburseModal, setShowDisburseModal] = useState(false);
   const [showRemarksModal, setShowRemarksModal] = useState(false);
   const [selectedAudit, setSelectedAudit] = useState(null);
@@ -117,211 +122,20 @@ const FinancialManagement = () => {
     setShowRemarksModal(true);
   };
 
-  const renderOverview = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center">
-          <div className="p-3 rounded-full bg-purple-100 text-purple-600">
-            <Calendar className="h-6 w-6" />
-          </div>
-          <div className="ml-4">
-            <p className="text-gray-500">Financial Year</p>
-            <h3 className="text-2xl font-semibold">{overviewStats.financialYear}</h3>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center">
-          <div className="p-3 rounded-full bg-blue-100 text-blue-600">
-            <DollarSign className="h-6 w-6" />
-          </div>
-          <div className="ml-4">
-            <p className="text-gray-500">Total Allocated</p>
-            <h3 className="text-2xl font-semibold">{overviewStats.totalAllocated}</h3>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center">
-          <div className="p-3 rounded-full bg-green-100 text-green-600">
-            <TrendingUp className="h-6 w-6" />
-          </div>
-          <div className="ml-4">
-            <p className="text-gray-500">Total Disbursed</p>
-            <h3 className="text-2xl font-semibold">{overviewStats.totalDisbursed}</h3>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center">
-          <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
-            <BarChart2 className="h-6 w-6" />
-          </div>
-          <div className="ml-4">
-            <p className="text-gray-500">Unallocated</p>
-            <h3 className="text-2xl font-semibold">{overviewStats.unallocated}</h3>
-          </div>
-        </div>
-      </div>
-    </div>
+  const renderSources = () => (
+   <NationalFundingSources />
   );
 
-  const renderFunding = () => (
-    <div className="bg-white p-6 rounded-lg shadow mb-8">
-      <h3 className="text-lg font-semibold mb-4">National Funding Allocation & Disbursement</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div>
-          <h4 className="text-md font-medium mb-4">Allocation by Votehead</h4>
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={nationalFundingAllocation}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {nationalFundingAllocation.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        <div>
-          <h4 className="text-md font-medium mb-4">Recent Major Disbursements</h4>
-          <div className="space-y-4">
-            {recentDisbursements.map((item) => (
-              <div key={item.id} className="border-b pb-2">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-medium">{item.recipient}</p>
-                    <p className="text-sm text-gray-500">{item.date} - {item.type}</p>
-                  </div>
-                  <span className="text-blue-600 font-semibold">{item.amount}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+  const renderRevenueAndExpenditure = () => (
+    <RevenueAndExpenditure />
   );
 
-  const renderExpenditure = () => (
-    <div className="bg-white p-6 rounded-lg shadow mb-8 space-y-8">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">National Expenditure Trend (in Billions Ksh)</h3>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={expenditureTrend}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip formatter={(value) => `Ksh ${value}B`} />
-              <Legend />
-              <Line type="monotone" dataKey="amount" stroke="#8884d8" name="Monthly Expenditure" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-      
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Expenditure by Institution Type (in Billions Ksh)</h3>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={expenditureByInstType}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="type" />
-              <YAxis />
-              <Tooltip formatter={(value) => `Ksh ${value}B`} />
-              <Legend />
-              <Bar dataKey="amount" fill="#82ca9d" name="Total Expenditure" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-      
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Expenditure by County (in Billions Ksh)</h3>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={expenditureByCounty}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip formatter={(value) => `Ksh ${value}B`} />
-              <Legend />
-              <Bar dataKey="amount" fill="#FF8042" name="Total Expenditure" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
+  const renderYearComparisons = () => (
+    <YearOverYearComparison />
   );
 
-  const renderAuditReports = () => (
-    <div className="bg-white p-6 rounded-lg shadow mb-8">
-      <h3 className="text-lg font-semibold mb-4">OAG Audit Reports</h3>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Program Code</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Audit Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FY</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Opinion</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risk</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {financialAudits.map((audit) => (
-              <tr key={audit.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{audit.programCode}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{audit.auditDate}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      audit.inspectionScore >= 80 ? 'bg-green-100 text-green-800' : 
-                      audit.inspectionScore >= 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {audit.inspectionScore}%
-                    </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{audit.financialYear}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{audit.auditOpinion}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {audit.riskFlag ? (
-                        <span className="text-red-600 font-medium">High</span>
-                    ) : (
-                        <span className="text-green-600 font-medium">Low</span>
-                    )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button onClick={() => handleViewRemarks(audit)} className="text-blue-600 hover:text-blue-900 mr-3">
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button className="text-gray-600 hover:text-gray-900">
-                    <Download className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+  const renderProjections = () => (
+    <FinancialProjections />
   );
 
   return (
@@ -333,54 +147,54 @@ const FinancialManagement = () => {
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('overview')}
+            onClick={() => setActiveTab('sources')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'overview'
+              activeTab === 'sources'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Overview
+            Sources
           </button>
           <button
-            onClick={() => setActiveTab('funding')}
+            onClick={() => setActiveTab('revenue & expenditure')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'funding'
+              activeTab === 'revenue & expenditure'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Funding & Disbursement
+            Revenue & expenditure
           </button>
           <button
-            onClick={() => setActiveTab('expenditure')}
+            onClick={() => setActiveTab('year comparisons')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'expenditure'
+              activeTab === 'year comparisons'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Expenditure Analysis
+            Year Comparisons
           </button>
           <button
-            onClick={() => setActiveTab('audit')}
+            onClick={() => setActiveTab('projections')}
             className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'audit'
+              activeTab === 'projections'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            OAG Audit Reports
+            Projections
           </button>
         </nav>
       </div>
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'overview' && renderOverview()}
-        {activeTab === 'funding' && renderFunding()}
-        {activeTab === 'expenditure' && renderExpenditure()}
-        {activeTab === 'audit' && renderAuditReports()}
+        {activeTab === 'sources' && renderSources()}
+        {activeTab === 'revenue & expenditure' && renderRevenueAndExpenditure()}
+        {activeTab === 'year comparisons' && renderYearComparisons()}
+        {activeTab === 'projections' && renderProjections()}
       </div>
 
       {/* Disburse Funds Modal */}
