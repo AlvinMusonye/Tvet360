@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { Search, Filter, Plus, X, BarChart as BarChartIcon, Edit } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { fetchInstitutionTotalsByType } from './service/MoeInstitutionService';
-import { formatNumberAsCommaSeparatedNumberString } from '../Dashboards/utils/NumberFormatUtls';
-import AverageGovernanceScoreTrend from './AverageGovernanceScoreTrend';
-import AverageCorruptionRiskIndexTrend from './AverageCorruptionRiskIndexTrend';
+import { fetchInstitutionTotalsByType } from '../service/MoeInstitutionService';
+import { formatNumberAsCommaSeparatedNumberString } from '../../Dashboards/utils/NumberFormatUtls';
+import AverageGovernanceScoreTrend from '../AverageGovernanceScoreTrend';
+import AverageCorruptionRiskIndexTrend from '../AverageCorruptionRiskIndexTrend';
+import AddInstitutionModal from './AddInstituionModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8360';
 
@@ -14,6 +15,14 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 const MoeInstitution = () => {
   const { currentUser } = useAuth();
   const [totalInstitutions, setTotalInstitutions] = useState(0);
+  const [accreditedInstitutions, setAccreditedInstitutions] = useState(0);
+  const [notAccreditedInstitutions, setNotAccreditedInstitutions] = useState(0);
+
+  const [averageGovernanceScore, setAverageGovernanceScore] = useState(0.0);
+  const [averageCorruptionRiskIndex, setAverageCorruptionRiskIndex] = useState(0.0);
+  const [showAddInstitutionModal, setShowAddInstitutionModal] = useState(false);
+
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('All');
   const [selectedCounty, setSelectedCounty] = useState('All');
@@ -65,6 +74,10 @@ const MoeInstitution = () => {
 
   // Fetch total institutions on component mount and when token changes
   useEffect(() => {
+    setAverageGovernanceScore(70.0);
+    setAverageCorruptionRiskIndex(3.5);
+    setAccreditedInstitutions(3);
+    setNotAccreditedInstitutions(0);
     if (currentUser?.token) {
       fetchInstitutionsData();
     }
@@ -410,21 +423,7 @@ const MoeInstitution = () => {
         <p className="text-gray-600">Manage and monitor all registered institutions</p>
       </div>
 
-      {/* Action Bar */}
-      <div className="flex justify-between items-center mb-6">
-        <button
-          onClick={() => {
-            setShowCreateForm(!showCreateForm);
-            if (!showCreateForm) {
-              setIsEditing(false); // Reset editing state when opening fresh
-            }
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          {showCreateForm ? 'Cancel' : (isEditing ? 'Edit Institution' : 'Add New Institution')}
-        </button>
-      </div>
+      <AddInstitutionModal show={showAddInstitutionModal} setShow={setShowAddInstitutionModal} />
 
       {/* Create Institution Form */}
       {showCreateForm && (
@@ -678,8 +677,8 @@ const MoeInstitution = () => {
         </div>
       )}
 
-      {/* Total institutions, Search and Filter Bar */}
-      <div className="p-0 mb-6 flex flex-col md:flex-row space-between gap-4 ">
+      {/* Total institutions, accredted and those not accredited */}
+      <div className="p-0 mb-6 flex flex-col md:flex-row justify-between align-center gap-4 ">
 
         <div className="relative w-full md:w-1/3 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center">
@@ -695,7 +694,85 @@ const MoeInstitution = () => {
           </div>
         </div>
 
-        
+        <div className="relative w-full md:w-1/3 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+              {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg> */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" >
+                {/* Building */}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21h18M5 21V5a2 2 0 012-2h6a2 2 0 012 2v16M9 7h1m-1 4h1m4-4h1m-1 4h1m-6 10v-5a1 1 0 011-1h2a1 1 0 011 1v5" />
+
+                {/* Check badge */}
+                <circle cx="18" cy="6" r="5" strokeWidth={2} />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 6l1 1 2-2" stroke="bg-green-500"/>
+              </svg>
+
+            </div>
+            <div>
+              <p className="text-sm font-medium text-center text-gray-500">Institutions Accredited</p>
+              <p className="text-2xl font-semibold text-center text-green-500">{accreditedInstitutions}</p>
+              <p className="text-lg font-medium text-center text-gray-500">{`${accreditedInstitutions / totalInstitutions * 100}%`}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative w-full md:w-1/3 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center">
+            <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+              {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg> */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" >
+                {/* Building */}
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21h18M5 21V5a2 2 0 012-2h6a2 2 0 012 2v16M9 7h1m-1 4h1m4-4h1m-1 4h1m-6 10v-5a1 1 0 011-1h2a1 1 0 011 1v5" />
+
+                {/* X badge */}
+                <circle cx="18" cy="6" r="5" strokeWidth={2} />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 5l2 2m0-2l-2 2" />
+              </svg>
+
+            </div>
+            <div>
+              <p className="text-sm font-medium text-center text-gray-500">Institutions Not Accredited</p>
+              <p className="text-2xl font-semibold text-center text-red-500">{notAccreditedInstitutions}</p>
+              <p className="text-lg font-medium text-center text-gray-500">{`${notAccreditedInstitutions / totalInstitutions * 100}%`}</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* average governance score and average corruption risk index */}
+      <div className="p-0 mb-6 flex flex-col md:flex-row justify-between align-center gap-4 ">
+        <div className="relative w-full md:w-1/2 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex flex-row items-center">
+            {/* <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div> */}
+            <div className="w-full">
+              <p className="text-2xl text-center font-semibold text-green-500">{`${averageGovernanceScore}%`}</p>
+              <p className="text-sm w-full font-medium text-center text-gray-500">Average Governance Score</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative w-full md:w-1/2 bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center">
+            {/* <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div> */}
+            <div className='w-full'>
+              <p className="text-2xl text-center font-semibold text-red-500">{averageCorruptionRiskIndex}</p>
+              <p className="text-sm font-medium text-center text-gray-500">Average Corruption Risk Index</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -796,149 +873,167 @@ const MoeInstitution = () => {
       </div> */}
 
       {/* CHARTS SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 my-2 bg-white p-6 rounded-lg shadow mb-8">
-        <div>
+      <div className="grid grid-cols-1 mb-8">
+        <div className="my-2 bg-white p-6 rounded-lg shadow">
           <AverageGovernanceScoreTrend />
         </div>
-        <div>
+        <div className="my-2 bg-white p-6 rounded-lg shadow">
           <AverageCorruptionRiskIndexTrend />
         </div>
       </div>
 
       {/* Institutions Table */}
-      <div className='bg-white shadow-sm rounded-lg grid grid-cols-1 p-3 mb-4'>
-        <div className=" m-0 p-2 relative w-full flex flex-row items-center ">
-          <div className="flex self-align-center flex-col md:flex-row md:items-center w-full gap-2">
-            
-            <div className="relative w-full flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search institutions..."
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="relative w-full md:w-1/4">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <select
-                className="w-full pl-10 pr-4 py-2 border rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                value={selectedType}
-                onChange={(event) => {
-                  let newVal = event.target?.value;
-                  console.log(newVal);
-                    setSelectedType(newVal);
-                }}
-              >
-                {institutionTypes.map(type => (<option value={type.institutionType} >{type.institutionType}</option>))}
-                {/* <option value="All">All Types</option>
-                <option value="NATIONAL_POLYTECHNIC">Polytechnic</option>
-                <option value="INSTITUTE_OF_TECHNOLOGY">Institute of Technology</option>
-                <option value="TECHNICAL_VOCATIONAL_COLLEGE">TTI &amp; TVCs</option> */}
-              </select>
-            </div>
-
-            <div className="relative w-full md:w-1/4">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <select
-                className="w-full pl-10 pr-4 py-2 border rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                value={selectedCounty}
-                onChange={(e) => setSelectedCounty(e.target.value)}
-              >
-                <option value="All">All Counties</option>
-                {availableCounties.map(county => (
-                  <option key={county} value={county}>{county}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="relative w-full md:w-1/4">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <select
-                className="w-full pl-10 pr-4 py-2 border rounded-lg appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                value={selectedAccreditation}
-                onChange={(e) => setSelectedAccreditation(e.target.value)}
-              >
-                <option value="All">All Statuses</option>
-                <option value="ACCREDITED">Accredited</option>
-                <option value="PENDING">Pending</option>
-                <option value="SUSPENDED">Suspended</option>
-              </select>
-            </div>
-
-          </div>
+      <div className='bg-white shadow-sm rounded-lg grid grid-cols-1 p-3 gap-4 mb-4'>
+        {/* Action Bar */}
+        <div className="flex flex-row w-full  justify-end">
+          <button
+            onClick={() => {
+              setShowAddInstitutionModal(true);
+              // setShowCreateForm(!showCreateForm);
+              // if (!showCreateForm) {
+              //   setIsEditing(false); // Reset editing state when opening fresh
+              // }
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            {showCreateForm ? 'Cancel' : (isEditing ? 'Edit Institution' : 'Add New Institution')}
+          </button>
         </div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-100">
+          <div className=" m-0 p-2 relative w-full flex flex-row items-center ">
+            <div className="flex self-align-center flex-col md:flex-row md:items-center w-full gap-2">
+              
+              <div className="relative w-full flex-1 bg-gray-100 rounded-lg">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search institutions..."
+                  className="w-full pl-10 pr-4 py-2 border-none rounded-lg focus:ring-blue-500 focus:border-transparent"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden mb-8">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Institution Name
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Registration No.
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    County
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Accreditation
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredInstitutions.length > 0 ? (
-                  filteredInstitutions.map((inst) => (
-                    <tr key={inst.institutionRegistrationNumber} onClick={() => handleInstitutionClick(inst)} className="hover:bg-gray-50 cursor-pointer">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {inst.institutionName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {inst.institutionRegistrationNumber}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {inst.institutionCounty}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{inst.institutionType}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.institutionAccreditationStatus === 'ACCREDITED' ? 'bg-green-100 text-green-800' : inst.institutionAccreditationStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                          {inst.institutionAccreditationStatus}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <button onClick={(e) => handleEdit(e, inst)} className="text-blue-600 hover:text-blue-900 mr-3" title="Edit">
-                          <Edit className="w-4 h-4" />
-                        </button>
+              <div className="relative w-full md:w-1/4">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <select
+                  className="w-full pl-10 pr-4 py-2 border-1 rounded-sm bg-white"
+                  value={selectedType}
+                  onChange={(event) => {
+                    let newVal = event.target?.value;
+                    console.log(newVal);
+                      setSelectedType(newVal);
+                  }}
+                >
+                  {institutionTypes.map(type => (<option value={type.institutionType} >{type.institutionType}</option>))}
+                  {/* <option value="All">All Types</option>
+                  <option value="NATIONAL_POLYTECHNIC">Polytechnic</option>
+                  <option value="INSTITUTE_OF_TECHNOLOGY">Institute of Technology</option>
+                  <option value="TECHNICAL_VOCATIONAL_COLLEGE">TTI &amp; TVCs</option> */}
+                </select>
+              </div>
+
+              <div className="relative w-full md:w-1/4">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <select
+                  className="w-full pl-10 pr-4 py-2 border rounded-sm bg-white"
+                  value={selectedCounty}
+                  onChange={(e) => setSelectedCounty(e.target.value)}
+                >
+                  <option value="All">All Counties</option>
+                  {availableCounties.map(county => (
+                    <option key={county} value={county}>{county}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="relative w-full md:w-1/4">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <select
+                  className="w-full pl-10 pr-4 py-2 border-1 rounded-sm bg-white"
+                  value={selectedAccreditation}
+                  onChange={(e) => setSelectedAccreditation(e.target.value)}
+                >
+                  <option value="All">All Statuses</option>
+                  <option value="ACCREDITED">Accredited</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="SUSPENDED">Suspended</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+
+          <div className=" overflow-hidden mb-8">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Institution Name
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Registration No.
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      County
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Type
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Accreditation
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredInstitutions.length > 0 ? (
+                    filteredInstitutions.map((inst) => (
+                      <tr key={inst.institutionRegistrationNumber} onClick={() => handleInstitutionClick(inst)} className="hover:bg-gray-50 cursor-pointer">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {inst.institutionName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {inst.institutionRegistrationNumber}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {inst.institutionCounty}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{inst.institutionType}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${inst.institutionAccreditationStatus === 'ACCREDITED' ? 'bg-green-100 text-green-800' : inst.institutionAccreditationStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                            {inst.institutionAccreditationStatus}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <button onClick={(e) => handleEdit(e, inst)} className="text-blue-600 hover:text-blue-900 mr-3" title="Edit">
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                        No institutions found matching your criteria
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
-                      No institutions found matching your criteria
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"> */}
         {/* Institutions by Type */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <h4 className="text-lg font-semibold text-gray-800 mb-4">Total institutions by type</h4>
           {loading ? (
             <div className="h-64 flex items-center justify-center text-gray-400">Loading chart...</div>
@@ -978,12 +1073,12 @@ const MoeInstitution = () => {
               </ResponsiveContainer>
             </div>
           )}
-        </div>
+        </div> */}
 
         
 
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        {/* <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <h4 className="text-lg font-semibold text-gray-800 mb-4">Institution Accreditation Statistics</h4>
           {loading ? (
             <div className="h-64 flex items-center justify-center text-gray-400">Loading chart...</div>
@@ -1023,8 +1118,8 @@ const MoeInstitution = () => {
               </ResponsiveContainer>
             </div>
           )}
-        </div>
-      </div>
+        </div> */}
+      {/* </div> */}
 
       {/* {isProgramModalOpen && selectedInstitutionForModal && (
         <div className="fixed inset-0  bg-opacity-50 flex items-center justify-center p-4 z-50">

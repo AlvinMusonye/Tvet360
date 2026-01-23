@@ -9,16 +9,19 @@ const EnrollmentHistory = () => {
     return (
         <div className="grid grid-cols-1 w-full gap-2">
             <p className="font-bold">Enrollment History</p>
-            <div className="w-full">
-            <EnrollmentTrendBarGraph />
-            </div>
+
             <div className="w-full">
             <EnrollmentForLastThreeIntakes />
             </div>
 
             <div className="w-full">
+            <EnrollmentTrendBarGraph />
+            </div>
+
+            <div className="w-full">
             <CrossIntakeComparison />
             </div>
+            
             <div className="w-full">
             <IntakeGroupedBarChartForPastFiveYears />
             </div>

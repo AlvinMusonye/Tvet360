@@ -1,12 +1,13 @@
 import { 
     XAxis, YAxis,
-  BarChart, Bar, Cell, Tooltip, CartesianGrid, ResponsiveContainer,
+  ComposedChart, Bar, Cell, Tooltip, CartesianGrid, ResponsiveContainer, LabelList, Line,
   Legend
 } from 'recharts';
 
 import { Briefcase } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { formatNumberAsCommaSeparatedNumberString } from '../../Dashboards/utils/NumberFormatUtls';
+import { fetchTotalStudentEnrollmentForIntakeForThePastFiveYears } from './service/EnrollmentService';
 
 
 const CrossIntakeComparison = () => {
@@ -46,7 +47,8 @@ const CrossIntakeComparison = () => {
 
 useEffect(() => {
     (async () => {
-        setSelectedIntakeData(getIntakeData()[selectedIntake]);
+        let resp = await fetchTotalStudentEnrollmentForIntakeForThePastFiveYears(selectedIntake.slice(0,3));
+        setSelectedIntakeData(resp.data.reverse());
     })();
 }, [selectedIntake]);
 return (<>
@@ -72,13 +74,13 @@ return (<>
         </h2>
         <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-                <BarChart
+                <ComposedChart
                     data={selectedIntakeData}
                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis 
-                    dataKey="year" 
+                    dataKey="key" 
                     tick={{ fontSize: 12 }}
                     tickFormatter={(value) => value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : ''}
                     />
@@ -98,11 +100,22 @@ return (<>
                     fill="#8884d8" 
                     radius={[4, 4, 0, 0]}
                     >
+                        <LabelList dataKey="value" position="top" offset={10} formatter={(value) => `${formatNumberAsCommaSeparatedNumberString(value)}`} />
                     {selectedIntakeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                     </Bar>
-                </BarChart>
+
+                    <Line
+                    tooltipType="none"
+                    type="linear"
+                    dataKey="value"
+                    name="Enrollment Trend"
+                    stroke="#0044ff"
+                    strokeWidth={3}
+                    dot={{ r: 4 }}
+                    />
+                </ComposedChart>
             </ResponsiveContainer>
         </div>
     </div>

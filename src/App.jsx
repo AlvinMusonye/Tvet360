@@ -13,7 +13,6 @@ import Programs from './institution/Programs';
 import Reports from './institution/Reports';
 import Infrastructure from './institution/Infrastructure';
 import Layout from './components/layout/Layout'; 
-import MoeInstitution from './moe/MoeInstitution';
 import Equity from './moe/Equity';
 import Employment from './moe/Employment';
 import MoeReports from './moe/MoeReports';
@@ -24,6 +23,7 @@ import UserManagement from './moe/UserManagement';
 import Setting from './components/Setting'
 import MoeStudents from './moe/MoeStudents';
 import FinancialManagement from './moe/FinancialManagement';
+import MoeInstitution from './moe/institution/MoeInstitution';
 
 
 function App() {

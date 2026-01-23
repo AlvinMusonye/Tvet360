@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from "react";
-import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, BarChart, Bar, Cell, Tooltip, Legend } from "recharts";
+import { ResponsiveContainer, XAxis, YAxis, CartesianGrid, Line, Bar, Cell, Tooltip, Legend, LabelList, ComposedChart } from "recharts";
 import { Briefcase } from "lucide-react";
 import { formatNumberAsCommaSeparatedNumberString } from "../../Dashboards/utils/NumberFormatUtls";
+import { fetchTotalStudentEnrollmentForThePastThreeIntakes } from "./service/EnrollmentService";
 
 const EnrollmentForLastThreeIntakes = () => {
 
@@ -18,7 +19,8 @@ const EnrollmentForLastThreeIntakes = () => {
 
     useEffect(() => {
         (async () => {
-            setIntakeData(data);
+            let resp = await fetchTotalStudentEnrollmentForThePastThreeIntakes();
+            setIntakeData(resp.data.reverse());
         })();
     }, []);
 
@@ -31,18 +33,19 @@ const EnrollmentForLastThreeIntakes = () => {
             </div>
             <div className="w-full h-80">
             <ResponsiveContainer width="100%" height="100%">
-            <BarChart
+            <ComposedChart
                 data={intakeData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
             >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis 
-                dataKey="intake" 
+                dataKey="key" 
                 tick={{ fontSize: 12 }}
                 tickFormatter={(value) => value ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase() : ''}
                 />
                 <YAxis 
                 tick={{ fontSize: 12 }}
+                dataKey="value"
                 tickFormatter={(value) => value.toLocaleString()}
                 allowDecimals={false}
                 />
@@ -52,16 +55,29 @@ const EnrollmentForLastThreeIntakes = () => {
                 />
                 <Legend />
                 <Bar 
-                dataKey="totalStudentsEnrolled" 
+                dataKey="value" 
                 name="Number of Students" 
                 fill="#8884d8" 
                 radius={[4, 4, 0, 0]}
                 >
+                    <LabelList dataKey="value" position="top" offset={10} 
+                    formatter={(value) => `${formatNumberAsCommaSeparatedNumberString(value)}`}
+                    />
                 {intakeData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
                 </Bar>
-            </BarChart>
+
+                <Line
+                tooltipType="none"
+                type="linear"
+                dataKey="value"
+                name=""
+                stroke="#0044ff"
+                strokeWidth={3}
+                dot={{ r: 4 }}
+                />
+            </ComposedChart>
             </ResponsiveContainer>
             </div>
         </div>

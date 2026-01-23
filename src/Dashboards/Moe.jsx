@@ -115,7 +115,7 @@ const Moe = () => {
         if( Array.isArray(instCountByType) )
         {
           instCountByType.forEach(item => {
-            if( item.institutionType.toUpperCase() === "TECHNICAL_TRAINING_COLLEGE" )
+            if( item.institutionType.toUpperCase() === "TECHNICAL_TRAINING_INSTITUTE" )
             {
               setTotalVocationalAndTechnicalColleges(item.totalNumber);
             }
@@ -125,12 +125,12 @@ const Moe = () => {
               setTotalNationalPolytechnics(item.totalNumber);
             }
 
-            if(item.institutionType.toUpperCase() === "VOCATIONAL_TRAINING_CENTER")
+            if(item.institutionType.toUpperCase() === "VOCATIONAL_TRAINING_COLLEGE")
             {
               setTotalVocationalTrainingCenters(item.totalNumber);
             }
 
-            if(item.institutionType.toUpperCase() === "TRAINER_COLLEGE")
+            if(item.institutionType.toUpperCase() === "INSTITUTE_OF_TECHNOLOGY")
             {
               setTotalTechnicalTrainerColleges(item.totalNumber);
             }
@@ -360,7 +360,7 @@ const Moe = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <p className="text-sm font-bold text-start text-gray-500">Technical Trainer Colleges </p>
+              <p className="text-sm font-bold text-start text-gray-500">Technical Training Institutes </p>
             </div>
             <div>
               <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalTechnicalTrainerColleges)}`}</p>
@@ -379,7 +379,7 @@ const Moe = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
-              <p className="text-sm font-bold text-start text-gray-500">Vocational Training centers </p>
+              <p className="text-sm font-bold text-start text-gray-500">Institutes of Technology </p>
             </div>
             <div>
               <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalVocationalTrainingCenters)}`}</p>

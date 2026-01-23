@@ -611,7 +611,7 @@ useEffect(() => {
                     </select>
                   </div>
 
-                  <div>
+                  {/* <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Active Status</label>
                     <select
                       name="completionStatus"
@@ -628,7 +628,7 @@ useEffect(() => {
                       <option value="ACTIVE">Active</option>
                       <option value="INACTIVE">Inactive</option>
                     </select>
-                  </div>
+                  </div> */}
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>

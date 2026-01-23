@@ -1,7 +1,7 @@
 
 import { 
   XAxis, YAxis, 
-  CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line
+  CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar
 } from 'recharts';
 
 import { TrendingUp } from 'lucide-react';
@@ -23,7 +23,7 @@ const AverageGovernanceScoreTrend = () => {
         </h2>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
+            <BarChart
               data={averageGovernanceScoreTrendData}
               margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
             >
@@ -33,8 +33,8 @@ const AverageGovernanceScoreTrend = () => {
               <YAxis yAxisId="right" orientation="right" />
               <Tooltip />
               <Legend />
-              <Line yAxisId="left" type="monotone" dataKey="averageGovernanceScore" name="Average Governance Score" stroke="#8884d8" activeDot={{ r: 8 }} />
-            </LineChart>
+              <Bar yAxisId="left" type="monotone" dataKey="averageGovernanceScore" name="Average Governance Score" fill="#8884d8" activeDot={{ r: 8 }} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
