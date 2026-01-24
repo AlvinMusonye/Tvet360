@@ -34,12 +34,12 @@ const InstitutionTypeSummaryCard = ({institutionType, totalInstitutions, totalSt
         <div className="w-full">
           <p className="mt-1 text-3xl w-full font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalInstitutions)}`}</p>
           <div className="bg-white grid grid-cols-2 gap-2">
-            <div className="text-start shadow p-2 rounded border-1">
+            <div className="text-start shadow p-2 rounded ">
               <p className="col-12  text-lg text-semibold">
                 {`${formatNumberAsCommaSeparatedNumberString(totalStudentsEnrolled)} Enrolled`} 
               </p>
             </div>
-            <div className="text-end shadow p-2 rounded border-1">
+            <div className="text-end shadow p-2 rounded ">
               <p className="col-12 text-lg text-semibold">
                 {`${formatNumberAsCommaSeparatedNumberString(totalStudentsActive)} Active`}
               </p>
@@ -64,18 +64,18 @@ const Moe = () => {
   const [totalStudents, setTotalStudents] = useState(0);
   const [totalActiveStudents, setTotalActiveStudents] = useState(0);
 
-  const [totalInstitutions, setTotalInstitutions] = useState(1231);
+  const [totalInstitutions, setTotalInstitutions] = useState(0);
 
   const [institutionTypeSummaries, setInstitutionTypeSummaries] = useState([]);
 
 
 
-  const instTypeTestData = [
-    {institutionType: "National Polytechnic", totalInstitutions: 5, totalStudentsEnrolled: 82966, totalStudentsActive: 41353},
-    {institutionType: "Technical Training Institutes", totalInstitutions: 3, totalStudentsEnrolled: 28029, totalStudentsActive: 14058},
-    {institutionType: "Technical and Vocational Colleges", totalInstitutions: 0, totalStudentsEnrolled: 0, totalStudentsActive: 0},
-    {institutionType: "Institutes of Technology", totalInstitutions: 0, totalStudentsEnrolled: 0, totalStudentsActive: 0},
-  ];
+  // const instTypeTestData = [
+  //   {institutionType: "National Polytechnic", totalInstitutions: 5, totalStudentsEnrolled: 82966, totalStudentsActive: 41353},
+  //   {institutionType: "Technical Training Institutes", totalInstitutions: 3, totalStudentsEnrolled: 28029, totalStudentsActive: 14058},
+  //   {institutionType: "Technical and Vocational Colleges", totalInstitutions: 0, totalStudentsEnrolled: 0, totalStudentsActive: 0},
+  //   {institutionType: "Institutes of Technology", totalInstitutions: 0, totalStudentsEnrolled: 0, totalStudentsActive: 0},
+  // ];
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
@@ -86,6 +86,7 @@ const Moe = () => {
       console.log(resp.data);
 
       let instSummariesData = [];
+      let instCount = 0;
 
       if(Array.isArray(resp.data))
       {
@@ -93,18 +94,22 @@ const Moe = () => {
           if(element.institutionType === 'POLYTECHNIC')
           {
             instSummariesData.push({institutionType: "National Polytechnic", totalInstitutions: element.totalInstitutions, totalStudentsEnrolled: element.totalEnrolledStudents, totalStudentsActive: element.totalActiveStudents});
+            instCount += element.totalInstitutions;
           }
           else if(element.institutionType === 'TECHNICAL_TRAINING_INSTITUTE')
           {
             instSummariesData.push({institutionType: "Technical Training Institutes", totalInstitutions: element.totalInstitutions, totalStudentsEnrolled: element.totalEnrolledStudents, totalStudentsActive: element.totalActiveStudents});
+            instCount += element.totalInstitutions;
           }
           else if(element.institutionType === 'INSTITUTE_OF_TECHNOLOGY')
           {
             instSummariesData.push({institutionType: "Institutes of Technology", totalInstitutions: element.totalInstitutions, totalStudentsEnrolled: element.totalEnrolledStudents, totalStudentsActive: element.totalActiveStudents});
+            instCount += element.totalInstitutions;
           }
           else if(element.institutionType === 'TECHNICAL_AND_VOCATIONAL_COLLEGE')
           {
             instSummariesData.push({institutionType: "Technical and Vocational Colleges", totalInstitutions: element.totalInstitutions, totalStudentsEnrolled: element.totalEnrolledStudents, totalStudentsActive: element.totalActiveStudents});
+            instCount += element.totalInstitutions;
           }
         });
 
@@ -132,6 +137,9 @@ const Moe = () => {
         {
           instSummariesData.push({institutionType: "National Polytechnic", totalInstitutions: 0, totalStudentsEnrolled: 0, totalStudentsActive: 0});
         }
+
+        console.log(instCount);
+        setTotalInstitutions(instCount);
       }
 
       console.log("======================== summaries data =======================================");
@@ -410,7 +418,8 @@ const Moe = () => {
               <p className="text-sm font-bold text-start text-gray-500">Total active students</p>
             </div>
             <div>
-              <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalActiveStudents)}`}</p>
+              <p className="mt-1 text-3xl font-semibold text-center text-gray-900">{`${formatNumberAsCommaSeparatedNumberString(totalActiveStudents )}`}</p>
+              <p className="mt-1 text-lg font-semibold text-center text-blue-900">{`${Math.trunc(totalActiveStudents / totalStudents * 100)}%`}</p>
             </div>
           </div>
         </div>
